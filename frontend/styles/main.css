@@ -1,0 +1,62 @@
+/* 主要容器样式 */
+.main {
+    padding: 2rem;
+}
+
+/* 表单样式 */
+.stForm {
+    background-color: #f8f9fa;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 标题样式 */
+.st-heading {
+    color: #1e88e5;
+    margin-bottom: 2rem;
+}
+
+/* 展开面板样式 */
+.streamlit-expanderHeader {
+    background-color: #e3f2fd;
+    border-radius: 5px;
+}
+
+/* 按钮样式 */
+.stButton>button {
+    background-color: #1e88e5;
+    color: white;
+    border-radius: 5px;
+    padding: 0.5rem 2rem;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.stButton>button:hover {
+    background-color: #1565c0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* 输入框样式 */
+.stTextInput>div>div>input {
+    border-radius: 5px;
+    border: 1px solid #e0e0e0;
+}
+
+/* 文本区域样式 */
+.stTextArea>div>div>textarea {
+    border-radius: 5px;
+    border: 1px solid #e0e0e0;
+}
+
+/* 选择框样式 */
+.stSelectbox>div>div>select {
+    border-radius: 5px;
+    border: 1px solid #e0e0e0;
+}
+
+/* 加载动画样式 */
+.stSpinner>div {
+    border-color: #1e88e5;
+} 
