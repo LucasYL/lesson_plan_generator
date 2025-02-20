@@ -167,7 +167,7 @@ def render_input_form():
                             "broad_plan_feedback": feedback
                         })
                         st.session_state.broad_plan = revised_broad_result
-                        st.experimental_rerun()
+                        st.rerun()
             
             # 显示生成按钮
             if st.session_state.show_buttons:
@@ -232,7 +232,7 @@ def generate_lesson_plan(grade_level, topic, duration, style, objectives, requir
             st.session_state.broad_plan = broad_result
             st.session_state.current_step = "broad_plan"
             st.session_state.show_buttons = True
-            st.experimental_rerun()
+            st.rerun()
             
         except Exception as e:
             st.error(f"{UI_TEXT['error_prefix']}{str(e)}")
