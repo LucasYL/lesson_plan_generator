@@ -11,66 +11,119 @@ BROAD_PLAN_DRAFT_TEMPLATE = PromptTemplate(
         "style",
         "learning_objectives",
         "requirements",
-        "broad_plan_feedback"
+        "broad_plan_feedback",
+        "reference_context"
     ],
     template="""
 You are an expert instructional designer specializing in {grade_level} education.
 
-Below are the essential inputs for a broad lesson plan:
-- **Topic**: {topic}
-- **Duration**: {duration}
-- **Style**: {style}
-- **Learning Objectives**: {learning_objectives}
-- **Requirements** (Specific elements required in phases): {requirements}  
-  (e.g. "quiz", "group work", "lecture-based instruction", "hands-on coding activity", etc.)
-- **User Feedback for Revision** (if any): {broad_plan_feedback}
+INPUTS:
+1. Core Parameters:
+   - Topic: {topic}
+   - Duration: {duration} minutes total
+   - Grade Level: {grade_level}
 
-### **TASK**
-1) **SUMMARIZE INPUTS** (Do not copy verbatim):
-   - Identify the **core concepts** from `{topic}`
-   - Note the **time/style constraints**
-   - Distill key **learning objectives**
-   - Reflect **mandatory phase elements** from `requirements`
-   - Integrate **relevant user feedback** `{broad_plan_feedback}`
+2. Teaching Approach:
+   - Style: {style}
+     * This defines the primary teaching method (e.g., lecture-based means primarily instructor-led,
+       interactive means balanced between instruction and student participation,
+       practice-oriented means hands-on activities dominate)
+     * The lesson phases should strongly reflect this chosen style
 
-2) **STRUCTURE A BROAD LESSON PLAN**:
-   - Break `{duration}` into **logical phases**
-   - Ensure each phase explicitly **covers the required elements** (`requirements`)
-   - Structure **progressive skill-building** per `{style}`
-   - Align with `{grade_level}` student level
+3. Learning Goals:
+   - Objectives: {learning_objectives}
+     * These are the specific outcomes students should achieve by the end of the lesson
+     * Each phase should contribute to one or more of these objectives
+     * All objectives must be addressed in the lesson plan
+     * if there are only one or two objectives, then add more objectives that are related to the topic
 
-3) **VALIDATE**:
-   - Ensure **all required elements** are **mapped into phases**
-   - Implement relevant **user feedback** `{broad_plan_feedback}`
-   - Check **time distribution and logical flow**
+4. Structural Requirements:
+   - Requirements: {requirements}
+     * These are specific activities or elements that must be included
+     * Each requirement should be naturally integrated into appropriate phases
+     * The placement should make pedagogical sense within the lesson flow
 
-### **OUTPUT FORMAT (Valid JSON)**
+5. Additional Inputs:
+   - Reference Materials: {reference_context}
+   - User Feedback and Phase Structure: {broad_plan_feedback}
+
+TASK:
+1) Process Reference Materials (if provided):
+   - Extract key concepts and main ideas
+   - Identify important examples and case studies
+   - Note key terminology and definitions
+   - Map content to learning objectives
+   - Ensure at least 60% of lesson content is based on references
+   - Mark all reference-based content with [REF]
+
+2) Process User Feedback and Phase Changes:
+   - User feedback has the highest priority
+   - If feedback suggests removing phases:
+     * Remove specified phases
+     * Redistribute time to maintain total duration
+   - If feedback suggests adding phases:
+     * Add new phases as specified
+     * Adjust time allocation accordingly
+   - If feedback suggests modifying phases:
+     * Apply all specified modifications
+     * Maintain the exact names and durations provided
+   - For any other feedback:
+     * Apply suggested improvements
+     * Maintain overall structure unless explicitly told to change
+
+3) Design or Adapt Lesson Structure:
+   A. If modifying existing structure:
+      - First apply any structural changes from feedback
+      - Then apply any phase modifications
+      - Maintain exact phase names and durations as specified
+      - Enhance content within fixed structure
+      
+   B. If creating new structure:
+      - Break {duration} minutes into logical phases
+      - Ensure progression toward objectives
+      - Incorporate all requirements
+      - Follow pedagogical sequence
+
+4) Quality Check:
+   - Verify all feedback has been addressed
+   - Ensure phase modifications are applied exactly
+   - Check alignment with objectives
+   - Validate reference material usage
+   - Confirm total duration matches {duration}
+
+OUTPUT FORMAT (JSON):
 {{
-  "input_summary": {{
-    "core_focus": "Short summary of the main concept",
-    "key_constraints": ["time", "style", "grade level"],
-    "main_objectives": ["List of 3-4 key points"],
-    "feedback_notes": "Concise summary of user feedback"
-  }},
   "broad_plan": {{
-    "objectives": ["Refined, measurable learning goals"],
+    "objectives": [
+      "Refined learning goals (should consider the reference materials)"
+    ],
     "outline": [
       {{
-        "phase": "Phase name",
-        "duration": "Minutes",
-        "purpose": "Clear goal",
-        "approach": "Teaching method",
-        "required_elements": {requirements}  # Directly using the required elements
+        "phase": "Phase name (must match if specified in feedback)",
+        "duration": "Duration (must match if specified in feedback)",
+        "purpose": "What students will achieve in this phase (mark with [REF] if from references)",
+        "description": "Brief explanation of how this phase will unfold and how it contributes to objectives"
       }}
     ]
   }}
 }}
 
-### **CONSTRAINTS**
-- **No direct copying of inputs**
-- **Each phase must have a clear purpose**
-- **Must incorporate all `requirements` and `broad_plan_feedback`**
-- **Output only valid JSON, no extra text**
+CONSTRAINTS:
+1. Reference Materials:
+   * When provided, at least 60% of content must be reference-based
+   * Mark all reference-based content with [REF]
+   * Maintain academic level and teaching style
+
+2. User Feedback:
+   * User feedback has absolute priority
+   * Apply ALL requested changes exactly as specified
+   * Maintain exact phase names and durations when provided
+   * Only modify structure if explicitly requested
+
+3. Technical Requirements:
+   * Output only valid JSON
+   * Include all required fields
+   * Ensure total duration matches {duration} minutes
 """
 )
 
@@ -298,3 +351,142 @@ default_example = """
 - **Optional Check**: If time allows, do a quick question: "Which scenario is bubble sort more efficient than selection sort?" (Trick question: typically they share O(n^2), but details matter.)
 
 """
+
+# ==========================================
+# C) ARTIFACTS (Quiz and Code Practice)
+# ==========================================
+QUIZ_GENERATION_TEMPLATE = PromptTemplate(
+    input_variables=[
+        "phase_content",
+        "num_questions",
+        "difficulty",
+        "question_type",
+        "additional_notes"
+    ],
+    template="""
+You are creating a quiz for a lesson phase with the following content:
+{phase_content}
+
+Requirements:
+- Number of questions: {num_questions}
+- Difficulty: {difficulty}
+- Question type: {question_type}
+- Additional notes: {additional_notes}
+
+Create engaging and relevant questions that test understanding of the phase content.
+Focus on key concepts and learning objectives.
+Provide clear explanations for the correct answers.
+
+Output the quiz in the following JSON format:
+{{
+  "phase_name": "Phase name from the content",
+  "quiz_data": {{
+    "questions": [
+      {{
+        "id": 1,
+        "question": "Question text here",
+        "options": {{
+          "A": "Option A text",
+          "B": "Option B text",
+          "C": "Option C text",
+          "D": "Option D text"
+        }}
+      }}
+    ],
+    "answers": [
+      {{
+        "id": 1,
+        "correct_answer": "A",
+        "explanation": "Detailed explanation of why this is the correct answer"
+      }}
+    ]
+  }}
+}}
+
+Requirements:
+1. Output must be valid JSON
+2. Each question must have:
+   - Unique ID (starting from 1)
+   - Clear question text
+   - 4 options (A through D)
+3. Each answer must have:
+   - Matching ID with its question
+   - Correct answer letter
+   - Detailed explanation
+4. Questions should be relevant to the phase content
+5. Explanations should be educational and thorough
+"""
+)
+
+CODE_PRACTICE_GENERATION_TEMPLATE = PromptTemplate(
+    input_variables=[
+        "phase_content",
+        "programming_language",
+        "difficulty",
+        "question_type",
+        "additional_requirements"
+    ],
+    template="""
+You are creating a coding practice exercise for a lesson phase with the following content:
+{phase_content}
+
+Requirements:
+- Programming language: {programming_language}
+- Difficulty: {difficulty}
+- Question type: {question_type}
+- Additional requirements: {additional_requirements}
+
+Format your output in the following structure:
+
+### Coding Exercise: [Exercise Name]
+
+#### Problem Description
+[Clear description of the problem to solve]
+
+#### Learning Objectives
+- [Specific skill or concept being practiced]
+- [Additional objectives]
+
+#### Requirements
+- [Input/output requirements]
+- [Constraints or special conditions]
+- [Performance requirements if any]
+
+#### Starter Code
+```{programming_language}
+[Provide starter code with comments]
+```
+
+#### Example
+**Input:**
+```
+[Example input]
+```
+
+**Expected Output:**
+```
+[Example output]
+```
+
+#### Hints
+1. [First hint to guide students]
+2. [Second hint]
+3. [Additional hints if needed]
+
+#### Solution
+```{programming_language}
+[Complete solution with comments explaining key parts]
+```
+
+#### Test Cases
+```{programming_language}
+[Provide test cases to verify solution]
+```
+
+Note:
+- Use clear and descriptive variable names
+- Include helpful comments
+- Provide multiple test cases
+- Use proper code formatting
+"""
+)

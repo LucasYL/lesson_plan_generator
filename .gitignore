@@ -34,6 +34,14 @@ ENV/
 *.swp
 *.swo
 
+# Streamlit
+.streamlit/
+
+# Project specific
+temp_uploads/
+*.pdf
+*.log
+
 # OS
 .DS_Store
-Thumbs.db .env
+Thumbs.db

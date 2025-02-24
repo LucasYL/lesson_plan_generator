@@ -1,19 +1,20 @@
-import streamlit as st
+# Standard library imports
 import sys
 import os
 import json
 from pathlib import Path
 
+# Third-party imports
+import streamlit as st
+
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-from backend.chains import (
-    get_llm,
-    get_openrouter_llm,
-    create_broad_plan_draft_chain,
-    create_full_plan_chains
-)
+# Local application imports
+from backend.chains import get_llm, get_openrouter_llm
+from backend.chains import create_broad_plan_draft_chain, create_full_plan_chains
+from backend.chains import create_artifact_chain
 
 # UI text constants
 UI_TEXT = {
@@ -22,8 +23,8 @@ UI_TEXT = {
     "duration": "Duration (minutes)",
     "topic": "Topic",
     "teaching_style": "Teaching Style",
-    "learning_objectives": "Learning Objectives (one per line)",
-    "requirements": "Requirements (one per line)",
+    "learning_objectives": "Learning Objectives (Optional)",
+    "requirements": "Requirements (Optional)",
     "generate_button": "Generate Plan",
     "error_missing_fields": "Please fill in the topic and learning objectives",
     "generating_message": "Generating lesson plan, please wait...",
@@ -74,7 +75,26 @@ def init_session_state():
             "style": None,
             "objectives": None,
             "requirements": None,
-            "example": None
+            "example": None,
+            "reference_files": None,
+            "reference_text": None
+        }
+    # Add phase editing tracking
+    if 'phase_edits' not in st.session_state:
+        st.session_state.phase_edits = {
+            'changes': [],  # Store phase modifications
+            'original_plan': None,  # Original plan for reference
+            'has_changes': False  # Track if there are unsaved changes
+        }
+    if 'editing_phase' not in st.session_state:
+        st.session_state.editing_phase = None  # Track which phase is being edited
+    # Revision dialog state
+    if 'show_revision_dialog' not in st.session_state:
+        st.session_state.show_revision_dialog = False
+    if 'revision_data' not in st.session_state:
+        st.session_state.revision_data = {
+            'phases': [],
+            'feedback': ""
         }
 
 def render_input_form():
@@ -87,7 +107,7 @@ def render_input_form():
     if 'broad_chain' not in st.session_state:
         st.session_state.broad_chain = create_broad_plan_draft_chain(st.session_state.llm)
     
-    # 创建左右两列布局
+    # Create two-column layout
     left_col, right_col = st.columns([2, 1])
     
     with left_col:
@@ -114,28 +134,58 @@ def render_input_form():
                     index=TEACHING_STYLES.index(st.session_state.form_data["style"]) if st.session_state.form_data["style"] else 0
                 )
             
-            # 添加example输入区域，使用expander使界面更整洁    
-            with st.expander("Reference Example (Optional)", expanded=False):
+            # Add file upload component
+            from components.FileUpload import FileUpload
+            file_uploader = FileUpload()
+            st.write("📄 Upload Reference Materials (Optional) - Support uploading up to 2 PDF files, each file not exceeding 10MB")
+            
+            # File upload component
+            uploaded_files = st.file_uploader(
+                "Choose files",
+                type=["pdf"],
+                accept_multiple_files=True
+            )
+            
+            if uploaded_files:
+                # Save and process files
+                from backend.file_processor import FileProcessor
+                file_paths = file_uploader.save_uploaded_files(uploaded_files)
+                processed_files = FileProcessor.process_files(file_paths)
+                
+                # Merge all file texts
+                reference_text = "\n\n".join(processed_files.values())
+                st.session_state.form_data["reference_text"] = reference_text
+                st.session_state.form_data["reference_files"] = [f.name for f in uploaded_files]
+                
+                # Display processing results
+                st.success(f"Successfully processed {len(processed_files)} reference files")
+            
+            # Add example lesson plan input area with expander
+            with st.expander("Example Lesson Plan (Optional)", expanded=False):
                 example = st.text_area(
                     "Provide a reference lesson plan example",
                     height=150,
                     value=st.session_state.form_data["example"] if st.session_state.form_data["example"] else "",
                     placeholder="You can provide a reference lesson plan example here. If left empty, default examples will be used."
                 )
-                
-            learning_objectives = st.text_area(
-                UI_TEXT["learning_objectives"],
-                height=100,
-                value="\n".join(st.session_state.form_data["objectives"]) if st.session_state.form_data["objectives"] else "",
-                placeholder="Example:\n1. Understand core concepts\n2. Master key skills\n3. Apply independently"
-            )
             
-            requirements = st.text_area(
-                UI_TEXT["requirements"],
-                height=100,
-                value="\n".join(st.session_state.form_data["requirements"]) if st.session_state.form_data["requirements"] else "",
-                placeholder="Example:\n1. Group discussion required\n2. Include practical exercises\n3. Include assessment"
-            )
+            # Add learning objectives with expander    
+            with st.expander("Learning Objectives (Optional)", expanded=False):
+                learning_objectives = st.text_area(
+                    "Enter learning objectives",
+                    height=100,
+                    value="\n".join(st.session_state.form_data["objectives"]) if st.session_state.form_data["objectives"] else "",
+                    placeholder="Example:\n1. Understand core concepts\n2. Master key skills\n3. Apply independently"
+                )
+            
+            # Add requirements with expander
+            with st.expander("Requirements (Optional)", expanded=False):
+                requirements = st.text_area(
+                    "Enter requirements",
+                    height=100,
+                    value="\n".join(st.session_state.form_data["requirements"]) if st.session_state.form_data["requirements"] else "",
+                    placeholder="Example:\n1. Group discussion required\n2. Include practical exercises\n3. Include assessment"
+                )
             
             submitted = st.form_submit_button(UI_TEXT["generate_button"])
     
@@ -144,37 +194,13 @@ def render_input_form():
         with left_col:
             display_broad_plan(st.session_state.broad_plan)
             
-            # 创建反馈区域的布局
-            st.write("### Feedback")
-            feedback = st.text_area(
-                "Provide feedback to improve the plan",
-                placeholder="Enter your suggestions for improvement...",
-                key="broad_plan_feedback",
-                label_visibility="collapsed"
-            )
-            
-            # 创建按钮区域
-            if feedback.strip():
-                if st.button("Revise Broad Plan", type="primary"):
-                    with st.spinner("Revising plan..."):
-                        revised_broad_result = st.session_state.broad_chain.invoke({
-                            "grade_level": st.session_state.form_data["grade_level"],
-                            "topic": st.session_state.form_data["topic"],
-                            "duration": st.session_state.form_data["duration"],
-                            "style": st.session_state.form_data["style"],
-                            "learning_objectives": json.dumps(st.session_state.form_data["objectives"], ensure_ascii=False),
-                            "requirements": json.dumps(st.session_state.form_data["requirements"], ensure_ascii=False),
-                            "broad_plan_feedback": feedback
-                        })
-                        st.session_state.broad_plan = revised_broad_result
-                        st.rerun()
-            
-            # 显示生成按钮
-            if st.session_state.show_buttons:
-                if st.button("Generate Full Plan", key="full_plan_btn"):
-                    generate_full_plan()
-                if st.button("Generate Enhanced Plan", key="enhanced_plan_btn"):
-                    generate_enhanced_plan()
+            # 暂时注释掉这些按钮
+            # Display generate buttons
+            # if st.session_state.show_buttons:
+            #     if st.button("Generate Full Plan", key="full_plan_btn"):
+            #         generate_full_plan()
+            #     if st.button("Generate Enhanced Plan", key="enhanced_plan_btn"):
+            #         generate_enhanced_plan()
     
     if submitted:
         if not topic:
@@ -217,16 +243,35 @@ def generate_lesson_plan(grade_level, topic, duration, style, objectives, requir
             llm2 = get_openrouter_llm(model_name="anthropic/claude-3.5-sonnet", temperature=0)
             broad_chain = create_broad_plan_draft_chain(llm)
             
+            # Prepare reference document content
+            reference_text = st.session_state.form_data.get("reference_text", "")
+            
+            # Format objectives and requirements as proper JSON arrays
+            objectives_json = json.dumps(objectives) if isinstance(objectives, list) else objectives
+            requirements_json = json.dumps(requirements) if isinstance(requirements, list) else requirements
+            
             # Generate broad plan
             broad_result = broad_chain.invoke({
                 "grade_level": grade_level,
                 "topic": topic,
                 "duration": duration,
                 "style": style,
-                "learning_objectives": json.dumps(objectives, ensure_ascii=False),
-                "requirements": json.dumps(requirements, ensure_ascii=False),
-                "broad_plan_feedback": ""
+                "learning_objectives": objectives_json,
+                "requirements": requirements_json,
+                "broad_plan_feedback": "",
+                "reference_context": reference_text
             })
+            
+            # Ensure the result is proper JSON
+            if isinstance(broad_result, str):
+                try:
+                    # Try to parse if it's a JSON string
+                    broad_result = json.loads(broad_result)
+                except json.JSONDecodeError:
+                    # If it contains markdown code blocks, extract the JSON
+                    if "```json" in broad_result:
+                        json_content = broad_result.split("```json")[1].split("```")[0].strip()
+                        broad_result = json.loads(json_content)
             
             # Store the result and update step
             st.session_state.broad_plan = broad_result
@@ -236,6 +281,11 @@ def generate_lesson_plan(grade_level, topic, duration, style, objectives, requir
             
         except Exception as e:
             st.error(f"{UI_TEXT['error_prefix']}{str(e)}")
+            import traceback
+            st.error(f"Detailed error: {traceback.format_exc()}")
+            # Display the raw result for debugging
+            st.write("Raw result:")
+            st.write(broad_result)
 
 def display_simple_full_plan(plan):
     """Display the simple full lesson plan without critique and revision"""
@@ -488,74 +538,188 @@ def generate_enhanced_plan():
             import traceback
             st.error(f"Detailed error: {traceback.format_exc()}")
 
+def display_learning_materials(broad_plan):
+    """Display all learning materials for the course
+    
+    Args:
+        broad_plan: Teaching plan containing learning materials
+    """
+    if not broad_plan or not broad_plan.get("outline"):
+        return
+        
+    st.markdown("---")
+    st.markdown("## 📚 Learning Materials")
+    
+    def display_quiz(quiz_content):
+        """Display quiz content"""
+        try:
+            # Parse quiz data
+            quiz_data = json.loads(quiz_content) if isinstance(quiz_content, str) else quiz_content
+            
+            # Display quiz title
+            st.markdown(f"### {quiz_data['phase_name']} - Quiz")
+            
+            # Create questions and answers tabs
+            questions_tab, answers_tab = st.tabs(["Questions", "Answers & Explanations"])
+            
+            # Display questions
+            with questions_tab:
+                for question in quiz_data["quiz_data"]["questions"]:
+                    st.markdown(f"#### Question {question['id']}")
+                    st.markdown(question["question"])
+                    st.markdown("**Options:**")
+                    for opt_key, opt_value in question["options"].items():
+                        st.markdown(f"{opt_key}) {opt_value}")
+                    st.markdown("---")
+            
+            # Display answers and explanations
+            with answers_tab:
+                for answer in quiz_data["quiz_data"]["answers"]:
+                    st.markdown(f"#### Question {answer['id']}")
+                    st.markdown(f"**Correct Answer:** {answer['correct_answer']}")
+                    st.markdown("**Explanation:**")
+                    st.markdown(answer["explanation"])
+                    st.markdown("---")
+                    
+        except Exception as e:
+            st.error(f"Error displaying quiz: {str(e)}")
+            st.markdown(quiz_content)
+    
+    def display_code_practice(content):
+        """Display coding practice content"""
+        st.markdown(content)
+    
+    # Iterate through all phases to display materials
+    has_materials = False
+    for phase in broad_plan.get("outline", []):
+        if not phase.get("artifacts"):
+            continue
+            
+        has_materials = True
+        st.markdown(f"### {phase['phase']}")
+        
+        # Use tabs if multiple materials exist
+        if len(phase["artifacts"]) > 1:
+            tabs = st.tabs([f"{artifact['type'].title()}" for artifact in phase["artifacts"]])
+            for tab, artifact in zip(tabs, phase["artifacts"]):
+                with tab:
+                    if artifact['type'] == "quiz":
+                        display_quiz(artifact["content"])
+                    else:
+                        display_code_practice(artifact["content"])
+        else:
+            # Display directly if only one material
+            artifact = phase["artifacts"][0]
+            with st.expander(f"{artifact['type'].title()}", expanded=True):
+                if artifact['type'] == "quiz":
+                    display_quiz(artifact["content"])
+                else:
+                    display_code_practice(artifact["content"])
+        
+        st.markdown("---")
+    
+    if not has_materials:
+        st.info("No learning materials have been generated yet. Click 'Generate Learning Materials' in any phase to create materials.")
+
 def display_broad_plan(plan):
-    """Display the lesson outline"""
+    """Display the course outline"""
     try:
-        # Parse the plan if it's a string
+        # Parse plan
         if isinstance(plan, str):
             plan = json.loads(plan)
         
-        # Extract the broad plan draft
-        if isinstance(plan.get("broad_plan_draft"), str):
-            plan = json.loads(plan.get("broad_plan_draft"))
+        # Extract broad plan draft
+        if "broad_plan_draft" in plan:
+            draft = plan["broad_plan_draft"]
+            if isinstance(draft, str):
+                if "```json" in draft:
+                    json_content = draft.split("```json")[1].split("```")[0].strip()
+                    plan = json.loads(json_content)
+                else:
+                    plan = json.loads(draft)
         
-        # Create a container for the plan display
+        # Create display container
         with st.container():
-            st.subheader(UI_TEXT["plan_title"])
+            st.header(UI_TEXT["plan_title"])
             
-            # Display input summary
-            st.write("### Summary")
-            summary = plan.get("input_summary", {})
-            if summary:
-                st.write(f"**Core Focus:**")
-                st.write(summary.get("core_focus", ""))
-                
-                st.write("**Key Constraints:**")
-                for constraint in summary.get("key_constraints", []):
-                    st.write(f"- {constraint}")
-                
-                st.write("**Main Objectives:**")
-                for obj in summary.get("main_objectives", []):
-                    st.write(f"- {obj}")
-            
-            # Display objectives
+            # Display learning objectives
             broad_plan = plan.get("broad_plan", {})
             if broad_plan:
-                st.write(f"### {UI_TEXT['objectives_title']}")
+                st.write("#### Learning Objectives")
                 for obj in broad_plan.get("objectives", []):
-                    st.write(f"- {obj}")
+                    if "[REF]" in obj:
+                        st.markdown(f"- 📚 {obj}")
+                    else:
+                        st.write(f"- {obj}")
             
-                # Display phases
-                st.write(f"### {UI_TEXT['phases_title']}")
-                for phase in broad_plan.get("outline", []):
-                    with st.expander(f"{phase['phase']} ({phase['duration']} minutes)"):
+                # Display teaching phases
+                st.write("#### Teaching Phases")
+                
+                # Initialize ArtifactModal
+                from components.ArtifactModal import ArtifactModal
+                artifact_modal = ArtifactModal()
+                
+                # Display each phase
+                for i, phase in enumerate(broad_plan.get("outline", [])):
+                    with st.expander(f"{phase['phase']} ({phase['duration']})", expanded=False):
                         if phase.get("purpose"):
-                            st.write(f"**Purpose:**")
-                            st.write(phase.get("purpose"))
+                            st.write("**Purpose:**")
+                            if "[REF]" in phase["purpose"]:
+                                st.markdown(f"📚 {phase['purpose']}")
+                            else:
+                                st.write(phase["purpose"])
+                        
+                        if phase.get("description"):
+                            st.write("**Description:**")
+                            st.write(phase["description"])
                             
-                        if phase.get("approach"):
-                            st.write(f"**Teaching Method:**")
-                            st.write(phase.get("approach"))
-                            
-                        if phase.get("required_elements"):
-                            st.write(f"**Required Elements:**")
-                            for elem in phase["required_elements"]:
-                                st.write(f"- {elem}")
+                        # Add generate materials button
+                        st.markdown("---")
+                        col1, col2 = st.columns([2, 4])
+                        with col1:
+                            if st.button("📦 Generate Learning Materials", key=f"add_artifact_{i}"):
+                                # 创建一个闭包来保存 broad_plan
+                                def generate_callback(params):
+                                    return handle_artifact_generation(params, broad_plan)
+                                artifact_modal.show(
+                                    phase_id=str(i),
+                                    phase_content={
+                                        "phase": phase["phase"],
+                                        "purpose": phase.get("purpose", ""),
+                                        "description": phase.get("description", "")
+                                    },
+                                    generate_callback=generate_callback
+                                )
+                                st.rerun()
+                
+                # Render artifact dialog
+                artifact_modal.render_dialog()
+                
+                # Add revise plan button
+                if st.button("✏️  Revise Plan", type="primary"):
+                    st.session_state.show_revision_dialog = True
+                    st.rerun()
             
-            # If we don't have proper structure, show raw data for debugging
-            if not summary and not broad_plan:
+            # If structure is not correct, display original data
+            if not broad_plan:
                 st.warning("Plan structure is not as expected. Raw data:")
                 st.write(plan)
+                
+            # Display learning materials
+            if broad_plan:
+                display_learning_materials(broad_plan)
                 
     except Exception as e:
         st.error(f"Error displaying plan: {str(e)}")
         st.write("Raw plan data:")
         st.write(plan)
+        import traceback
+        st.error(f"Detailed error: {traceback.format_exc()}")
 
 def display_full_plan(plan):
     """Display the full lesson plan"""
     try:
-        # 添加初始验证
+        # Add initial validation
         if plan is None:
             st.error("No plan data received")
             return
@@ -572,7 +736,7 @@ def display_full_plan(plan):
         
         # Extract the actual plan content through multiple levels if needed
         if isinstance(plan, dict):
-            # 记录处理过程
+            # Record processing steps
             processing_steps = []
             
             # If we have revised_plan as a string, parse it
@@ -613,7 +777,7 @@ def display_full_plan(plan):
                 processing_steps.append("Found slides field")
                 slides = plan["slides"]
             
-            # 如果没有找到必要的数据，尝试直接使用plan
+            # If necessary data is not found, try to use plan directly
             if not full_plan and "content" in plan:
                 processing_steps.append("Using plan as full_plan")
                 full_plan = plan
@@ -697,6 +861,233 @@ def display_full_plan(plan):
         import traceback
         st.error(f"Detailed error: {traceback.format_exc()}")
 
+def prepare_revision_input():
+    """Prepare the revision input combining user feedback and phase changes"""
+    # Get user feedback
+    feedback = st.session_state.get('broad_plan_feedback', '')
+    
+    # Get current phases (including modifications)
+    current_phases = []
+    if st.session_state.phase_edits['has_changes']:
+        # Get the original plan phases
+        original_phases = st.session_state.phase_edits['original_plan']['broad_plan']['outline']
+        changes_dict = {change['index']: change for change in st.session_state.phase_edits['changes']}
+        
+        # Apply changes while maintaining order
+        for i, phase in enumerate(original_phases):
+            if i in changes_dict:
+                current_phases.append({
+                    'phase': changes_dict[i]['phase'],
+                    'duration': changes_dict[i]['duration']
+                })
+            else:
+                current_phases.append({
+                    'phase': phase['phase'],
+                    'duration': phase['duration']
+                })
+    else:
+        # If no changes, get phases from original plan
+        original_phases = st.session_state.phase_edits['original_plan']['broad_plan']['outline']
+        current_phases = [{
+            'phase': phase['phase'],
+            'duration': phase['duration']
+        } for phase in original_phases]
+    
+    # Combine feedback and phase changes
+    combined_feedback = {
+        "user_feedback": feedback,
+        "current_phases": current_phases,
+        "has_phase_changes": st.session_state.phase_edits['has_changes']
+    }
+    
+    return json.dumps(combined_feedback, ensure_ascii=False)
+
+def revision_dialog():
+    """Display the revision dialog for editing phases and providing feedback"""
+    if not st.session_state.show_revision_dialog:
+        return
+        
+    # Create a new page for revision
+    st.markdown("## ✏️ Revise Lesson Plan")
+    
+    # Initialize revision data if empty
+    if not st.session_state.revision_data['phases']:
+        # Handle broad_plan data structure
+        broad_plan = st.session_state.broad_plan
+        if isinstance(broad_plan, str):
+            broad_plan = json.loads(broad_plan)
+        if "broad_plan_draft" in broad_plan:
+            if isinstance(broad_plan["broad_plan_draft"], str):
+                if "```json" in broad_plan["broad_plan_draft"]:
+                    json_content = broad_plan["broad_plan_draft"].split("```json")[1].split("```")[0].strip()
+                    broad_plan = json.loads(json_content)
+                else:
+                    broad_plan = json.loads(broad_plan["broad_plan_draft"])
+        
+        # Get phases data
+        outline = broad_plan.get("broad_plan", {}).get("outline", [])
+        st.session_state.revision_data['phases'] = [
+            {
+                'phase': phase['phase'],
+                'duration': phase['duration'],
+                'purpose': phase.get('purpose', ''),
+                'description': phase.get('description', '')
+            }
+            for phase in outline
+        ]
+    
+    # Display phases for editing
+    st.markdown("### Teaching Phases")
+    phases = st.session_state.revision_data['phases']
+    for i, phase in enumerate(phases):
+        with st.container():
+            st.markdown(f"#### Phase {i+1}")
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                phase['phase'] = st.text_input(
+                    "Phase Name",
+                    value=phase['phase'],
+                    key=f"phase_name_{i}"
+                )
+            with col2:
+                phase['duration'] = st.text_input(
+                    "Duration",
+                    value=phase['duration'],
+                    key=f"phase_duration_{i}"
+                )
+            # Display purpose and description (read-only)
+            if phase.get('purpose'):
+                st.markdown("**Purpose:**")
+                st.markdown(f"_{phase['purpose']}_")
+            if phase.get('description'):
+                st.markdown("**Description:**")
+                st.markdown(f"_{phase['description']}_")
+            st.markdown("---")
+    
+    # Add feedback section
+    st.markdown("### Feedback")
+    feedback = st.text_area(
+        "Provide feedback to improve the plan",
+        value=st.session_state.revision_data['feedback'],
+        height=150,
+        placeholder="Enter your suggestions for improvement..."
+    )
+    st.session_state.revision_data['feedback'] = feedback
+    
+    # Add buttons
+    col1, col2, col3 = st.columns([1, 1, 4])
+    with col1:
+        if st.button("Save & Revise", type="primary"):
+            # Prepare revision input
+            combined_feedback = {
+                "user_feedback": feedback,
+                "current_phases": [
+                    {
+                        'phase': phase['phase'],
+                        'duration': phase['duration']
+                    }
+                    for phase in st.session_state.revision_data['phases']
+                ],
+                "has_phase_changes": True
+            }
+            
+            # Get reference text from session state
+            reference_text = st.session_state.form_data.get("reference_text", "")
+            
+            # Generate revised plan
+            with st.spinner("Revising plan..."):
+                revised_broad_result = st.session_state.broad_chain.invoke({
+                    "grade_level": st.session_state.form_data["grade_level"],
+                    "topic": st.session_state.form_data["topic"],
+                    "duration": st.session_state.form_data["duration"],
+                    "style": st.session_state.form_data["style"],
+                    "learning_objectives": json.dumps(st.session_state.form_data["objectives"], ensure_ascii=False),
+                    "requirements": json.dumps(st.session_state.form_data["requirements"], ensure_ascii=False),
+                    "broad_plan_feedback": json.dumps(combined_feedback, ensure_ascii=False),
+                    "reference_context": reference_text
+                })
+                
+                # Update plan and close dialog
+                st.session_state.broad_plan = revised_broad_result
+                st.session_state.show_revision_dialog = False
+                st.session_state.revision_data = {'phases': [], 'feedback': ""}
+                st.rerun()
+    
+    with col2:
+        if st.button("Cancel"):
+            st.session_state.show_revision_dialog = False
+            st.session_state.revision_data = {'phases': [], 'feedback': ""}
+            st.rerun()
+
+def handle_artifact_generation(artifact_result, broad_plan):
+    """Handle the generation of learning materials
+    
+    Args:
+        artifact_result: Result from ArtifactModal containing generation parameters
+        broad_plan: Current teaching plan
+        
+    Returns:
+        bool: Whether the generation was successful
+    """
+    if not artifact_result:
+        return False
+        
+    try:
+        # Create artifact chain
+        llm = get_llm(model_name="gpt-4o-mini", temperature=0)
+        chain = create_artifact_chain(llm, artifact_result["type"])
+        
+        # Generate content
+        with st.spinner(f"Generating {artifact_result['type']}..."):
+            result = chain.invoke({
+                "phase_content": json.dumps(artifact_result["phase_content"], ensure_ascii=False),
+                **artifact_result["requirements"]
+            })
+            
+            # Process output format
+            if artifact_result['type'] == "quiz":
+                # Handle quiz output
+                if isinstance(result, dict) and "quiz" in result:
+                    artifact_content = result["quiz"]
+                else:
+                    artifact_content = result
+                
+                if isinstance(artifact_content, str):
+                    if "```json" in artifact_content:
+                        artifact_content = artifact_content.split("```json")[1].split("```")[0].strip()
+                    artifact_content = json.loads(artifact_content)
+                    
+            else:  # code_practice
+                # Handle code practice output
+                if isinstance(result, dict) and "code_practice" in result:
+                    artifact_content = result["code_practice"]
+                else:
+                    artifact_content = result
+            
+            # Add to corresponding phase
+            phase_id = int(artifact_result["phase_id"])
+            phase = broad_plan["outline"][phase_id]
+            if "artifacts" not in phase:
+                phase["artifacts"] = []
+            
+            phase["artifacts"].append({
+                "type": artifact_result["type"],
+                "content": artifact_content
+            })
+            
+            # Update session state
+            st.session_state.broad_plan = {
+                "broad_plan_draft": json.dumps({
+                    "broad_plan": broad_plan
+                }, ensure_ascii=False)
+            }
+            
+            return True
+            
+    except Exception as e:
+        st.error(f"Error generating material: {str(e)}")
+        return False
+
 def main():
     """Main application entry point"""
     st.set_page_config(
@@ -710,7 +1101,12 @@ def main():
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     
     init_session_state()
-    render_input_form()
+    
+    # Show revision dialog if needed
+    if st.session_state.show_revision_dialog:
+        revision_dialog()
+    else:
+        render_input_form()
 
 if __name__ == "__main__":
     main() 
