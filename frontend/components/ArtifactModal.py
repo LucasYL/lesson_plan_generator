@@ -25,6 +25,15 @@ ARTIFACT_TYPES = {
             "- Fill in the blanks: Code with gaps, students fill in key parts",
             "Additional requirements (Optional)"
         ]
+    },
+    "slides": {
+        "name": "Slides",
+        "icon": "📊",
+        "requirements": [
+            "Slide style (Academic/Visual/Minimalist)",
+            "Number of slides (3-15)",
+            "Additional requirements (Optional)"
+        ]
     }
 }
 
@@ -89,7 +98,7 @@ class ArtifactModal:
                 "Additional notes (Optional)"
             )
             
-        else:  # code_practice
+        elif artifact_type == "code_practice":
             requirements["programming_language"] = st.selectbox(
                 "Programming language",
                 options=["Python", "JavaScript", "Java", "C++"]
@@ -105,6 +114,21 @@ class ArtifactModal:
                     "Debug the code",
                     "Fill in the blanks"
                 ]
+            )
+            requirements["additional_requirements"] = st.text_area(
+                "Additional requirements (Optional)"
+            )
+        
+        elif artifact_type == "slides":
+            requirements["slide_style"] = st.selectbox(
+                "Slide style",
+                options=["Academic", "Visual", "Minimalist"]
+            )
+            requirements["num_slides"] = st.number_input(
+                "Number of slides",
+                min_value=3,
+                max_value=15,
+                value=5
             )
             requirements["additional_requirements"] = st.text_area(
                 "Additional requirements (Optional)"

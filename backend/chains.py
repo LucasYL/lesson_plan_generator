@@ -11,7 +11,8 @@ from .prompts import (
     FULL_PLAN_CRITIQUE_TEMPLATE,
     FULL_PLAN_REVISE_TEMPLATE,
     QUIZ_GENERATION_TEMPLATE,
-    CODE_PRACTICE_GENERATION_TEMPLATE
+    CODE_PRACTICE_GENERATION_TEMPLATE,
+    SLIDES_GENERATION_TEMPLATE
 )
 
 # Define public API
@@ -79,7 +80,7 @@ def create_artifact_chain(llm, artifact_type: str):
     
     Args:
         llm: The language model to use
-        artifact_type: Type of artifact to generate ('quiz' or 'code_practice')
+        artifact_type: Type of artifact to generate ('quiz', 'code_practice', or 'slides')
         
     Returns:
         LLMChain for the specified artifact type
@@ -95,6 +96,12 @@ def create_artifact_chain(llm, artifact_type: str):
             llm=llm,
             prompt=CODE_PRACTICE_GENERATION_TEMPLATE,
             output_key="code_practice"
+        )
+    elif artifact_type == "slides":
+        return LLMChain(
+            llm=llm,
+            prompt=SLIDES_GENERATION_TEMPLATE,
+            output_key="slides"
         )
     else:
         raise ValueError(f"Unsupported artifact type: {artifact_type}")

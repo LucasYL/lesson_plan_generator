@@ -287,141 +287,7 @@ def generate_lesson_plan(grade_level, topic, duration, style, objectives, requir
             st.write("Raw result:")
             st.write(broad_result)
 
-def display_simple_full_plan(plan):
-    """Display the simple full lesson plan without critique and revision"""
-    try:
-        # Parse the plan if it's a string
-        if isinstance(plan, str):
-            plan = json.loads(plan)
-        
-        # Extract the actual plan content through multiple levels if needed
-        if isinstance(plan, dict):
-            # Extract the full_plan part if it exists
-            if "full_plan" in plan:
-                plan = plan["full_plan"]
-            
-            # Now get the content
-            if "content" in plan:
-                content = plan["content"]
-            else:
-                content = plan
-        elif isinstance(plan, list):
-            content = plan
-        else:
-            content = None
-        
-        # Create container to display plan
-        with st.container():
-            st.subheader("Full Lesson Plan")
-            
-            # Display the content if it exists
-            if content:
-                for phase in content:
-                    with st.expander(f"{phase['phase']} ({phase.get('duration', 'N/A')})", expanded=True):
-                        for activity in phase.get("activities", []):
-                            st.markdown(f"#### {activity['type'].title()}")
-                            
-                            st.markdown("##### Instructions")
-                            st.markdown(activity["instructions"])
-                            
-                            if activity.get("notes"):
-                                st.markdown("##### Notes")
-                                st.markdown(f"_{activity['notes']}_")
-                            
-                            if activity.get("success_criteria"):
-                                st.markdown("##### Success Criteria")
-                                st.markdown(activity["success_criteria"])
-                            
-                            st.markdown("---")
-            else:
-                st.error("Unable to display lesson plan. Please check the plan format.")
-                st.write("Raw plan data:")
-                st.write(plan)
-            
-    except Exception as e:
-        st.error(f"Error displaying plan: {str(e)}")
-        st.write("Raw plan data:")
-        st.write(plan)
 
-def generate_full_plan():
-    """Generate the full lesson plan"""
-    if not st.session_state.broad_plan:
-        st.error("Please generate a broad plan first")
-        return
-        
-    with st.spinner("Generating full plan..."):
-        try:
-            # Initialize LLMs and chains
-            llm1 = get_llm(model_name="gpt-4o-mini", temperature=0)
-            llm2 = get_openrouter_llm(model_name="anthropic/claude-3.5-sonnet", temperature=0)
-            full_draft_chain, _, _ = create_full_plan_chains(llm1, llm1, llm1)
-            
-            # Extract broad plan information
-            broad_plan = st.session_state.broad_plan
-            if isinstance(broad_plan, str):
-                broad_plan = json.loads(broad_plan)
-            if isinstance(broad_plan.get("broad_plan_draft"), str):
-                broad_plan = json.loads(broad_plan.get("broad_plan_draft"))
-            
-            # Generate full plan
-            with st.spinner("Drafting full lesson plan..."):
-                full_plan_input = {
-                    "broad_plan_json": json.dumps(broad_plan, ensure_ascii=False)
-                }
-                
-                full_result = full_draft_chain.invoke(full_plan_input)
-                
-                # 处理full_result
-                if isinstance(full_result, dict) and "full_plan_draft" in full_result:
-                    try:
-                        # 提取 full_plan_draft 字段
-                        full_plan_draft = full_result["full_plan_draft"]
-                        
-                        # 如果是字符串，需要解析
-                        if isinstance(full_plan_draft, str):
-                            # 如果包含```json标记，需要提取JSON内容
-                            if "```json" in full_plan_draft:
-                                json_content = full_plan_draft.split("```json")[1].split("```")[0].strip()
-                                full_plan_draft = json.loads(json_content)
-                            # 如果是JSON字符串，直接解析
-                            else:
-                                full_plan_draft = json.loads(full_plan_draft)
-                        
-                        # 现在 full_plan_draft 应该是一个字典
-                        if isinstance(full_plan_draft, dict) and "full_plan" in full_plan_draft:
-                            content = full_plan_draft["full_plan"]["content"]
-                        else:
-                            st.error("Invalid plan format in full_plan_draft")
-                            st.write("Parsed full_plan_draft:")
-                            st.write(full_plan_draft)
-                            return
-                            
-                    except json.JSONDecodeError as e:
-                        st.error(f"Error parsing JSON in full_plan_draft: {str(e)}")
-                        st.write("Raw full_plan_draft:")
-                        st.write(full_result["full_plan_draft"])
-                        return
-                    except Exception as e:
-                        st.error(f"Error processing full_plan_draft: {str(e)}")
-                        st.write("Raw full_result:")
-                        st.write(full_result)
-                        return
-                else:
-                    st.error("Invalid result format: missing full_plan_draft")
-                    st.write("Raw result:")
-                    st.write(full_result)
-                    return
-                
-                st.session_state.full_plan = content
-                
-                # Display simple full plan
-                with st.container():
-                    display_simple_full_plan(content)
-            
-        except Exception as e:
-            st.error(f"Error generating full plan: {str(e)}")
-            import traceback
-            st.error(f"Detailed error: {traceback.format_exc()}")
 
 def generate_enhanced_plan():
     """Generate an enhanced lesson plan with critique and revision"""
@@ -589,6 +455,10 @@ def display_learning_materials(broad_plan):
         """Display coding practice content"""
         st.markdown(content)
     
+    def display_slides(content):
+        """Display slides content"""
+        st.markdown(content)
+    
     # Iterate through all phases to display materials
     has_materials = False
     for phase in broad_plan.get("outline", []):
@@ -605,16 +475,20 @@ def display_learning_materials(broad_plan):
                 with tab:
                     if artifact['type'] == "quiz":
                         display_quiz(artifact["content"])
-                    else:
+                    elif artifact['type'] == "code_practice":
                         display_code_practice(artifact["content"])
+                    elif artifact['type'] == "slides":
+                        display_slides(artifact["content"])
         else:
             # Display directly if only one material
             artifact = phase["artifacts"][0]
             with st.expander(f"{artifact['type'].title()}", expanded=True):
                 if artifact['type'] == "quiz":
                     display_quiz(artifact["content"])
-                else:
+                elif artifact['type'] == "code_practice":
                     display_code_practice(artifact["content"])
+                elif artifact['type'] == "slides":
+                    display_slides(artifact["content"])
         
         st.markdown("---")
     
@@ -1057,10 +931,17 @@ def handle_artifact_generation(artifact_result, broad_plan):
                         artifact_content = artifact_content.split("```json")[1].split("```")[0].strip()
                     artifact_content = json.loads(artifact_content)
                     
-            else:  # code_practice
+            elif artifact_result['type'] == "code_practice":
                 # Handle code practice output
                 if isinstance(result, dict) and "code_practice" in result:
                     artifact_content = result["code_practice"]
+                else:
+                    artifact_content = result
+            
+            elif artifact_result['type'] == "slides":
+                # Handle slides output
+                if isinstance(result, dict) and "slides" in result:
+                    artifact_content = result["slides"]
                 else:
                     artifact_content = result
             

@@ -433,60 +433,147 @@ You are creating a coding practice exercise for a lesson phase with the followin
 Requirements:
 - Programming language: {programming_language}
 - Difficulty: {difficulty}
-- Question type: {question_type}
+- Question type: {question_type} (possible types: "complete function", "fill in the blanks", "debug")
 - Additional requirements: {additional_requirements}
 
 Format your output in the following structure:
 
-### Coding Exercise: [Exercise Name]
-
-#### Problem Description
-[Clear description of the problem to solve]
+### Understanding [Algorithm/Concept Name]
+### Code_Practice
 
 #### Learning Objectives
-- [Specific skill or concept being practiced]
-- [Additional objectives]
+- [Primary skill or concept being practiced]
+- [Secondary objectives - keep these brief and focused]
+
+#### Coding Exercise: [Exercise Name]
+[Brief introduction to the exercise - 1-2 sentences maximum]
+
+#### Problem Description
+[Concise description of the problem to solve - keep this short and clear]
 
 #### Requirements
 - [Input/output requirements]
 - [Constraints or special conditions]
-- [Performance requirements if any]
+- [Performance expectations if relevant]
 
 #### Starter Code
 ```{programming_language}
-[Provide starter code with comments]
-```
+# For "complete function" type:
+# Provide function signature and docstring, with TODO comments where student should implement
+# Example:
+# def function_name(parameters):
+#     \"\"\"Docstring explaining function purpose\"\"\"
+#     # TODO: Implement the function
 
-#### Example
-**Input:**
-```
-[Example input]
-```
+# For "fill in the blanks" type:
+# Provide mostly complete code with specific sections marked for completion
+# Example:
+# def function_name(parameters):
+#     # Base case
+#     if condition:
+#         return value
+#     
+#     # TODO: Implement recursive case
+#     # ____ your code here ____
 
-**Expected Output:**
-```
-[Example output]
+# For "debug" type:
+# Provide code with intentional bugs for students to fix
+# Example:
+# def function_name(parameters):
+#     # This function has bugs that need to be fixed
+#     result = []
+#     for i in range(len(parameters) - 1):  # BUG: Incorrect range
+#         # More code with bugs...
 ```
 
 #### Hints
-1. [First hint to guide students]
-2. [Second hint]
-3. [Additional hints if needed]
+- [One concise, helpful hint that guides without giving away the solution]
+- [Optional second hint if really needed]
 
 #### Solution
 ```{programming_language}
-[Complete solution with comments explaining key parts]
+# Complete, correct solution with brief comments explaining key concepts
+# Make sure this solution matches the question_type:
+# - For "complete function": Show the full implementation
+# - For "fill in the blanks": Show the complete code with blanks filled
+# - For "debug": Show the corrected code with comments explaining the fixes
 ```
 
-#### Test Cases
-```{programming_language}
-[Provide test cases to verify solution]
-```
+Important notes:
+1. Tailor the starter code specifically to the question_type
+2. Keep all sections concise and focused
+3. Ensure the solution directly addresses the learning objectives
+4. Do NOT include Example or Test Cases sections
+5. Make sure hints are genuinely helpful without giving away the solution
+"""
+)
 
-Note:
-- Use clear and descriptive variable names
-- Include helpful comments
-- Provide multiple test cases
-- Use proper code formatting
+SLIDES_GENERATION_TEMPLATE = PromptTemplate(
+    input_variables=[
+        "phase_content",
+        "slide_style",
+        "num_slides",
+        "additional_requirements"
+    ],
+    template="""
+You are a professional instructional slide designer tasked with creating slides for the following teaching phase content:
+{phase_content}
+
+Requirements:
+- Slide style: {slide_style}
+- Number of slides: {num_slides}
+- Additional requirements: {additional_requirements}
+
+Please output the slide content in the following structure:
+
+### Slides: [Topic Name]
+
+#### Slide Overview
+- Main objectives and content summary of this slide set (2-3 sentences)
+- Suggested teaching approach (how to use these slides for instruction)
+
+#### Slide Content
+
+##### Slide 1: [Title]
+**Content:**
+- [Point 1]
+- [Point 2]
+- [Point 3]
+
+**Instructor Notes:**
+[Suggestions for explaining this slide, including emphasis points, potential questions, and discussion points]
+
+##### Slide 2: [Title]
+**Content:**
+- [Point 1]
+- [Point 2]
+- [Chart/Image description]
+
+**Instructor Notes:**
+[Suggestions for explaining this slide]
+
+// Continue based on the required number of slides...
+
+##### Slide [N]: [Title]
+**Content:**
+- [Point 1]
+- [Point 2]
+- [Summary/Next steps]
+
+**Instructor Notes:**
+[Suggestions for explaining this slide]
+
+#### Design Recommendations
+- [Color scheme suggestions]
+- [Font and typography recommendations]
+- [Image/chart usage recommendations]
+- [Interactive element suggestions]
+
+Important notes:
+1. Ensure each slide's content is concise, with each point not exceeding 1-2 lines
+2. Content should directly support learning objectives
+3. Use clear hierarchy and visual organization
+4. Include appropriate charts, image descriptions, or examples
+5. Instructor notes should provide valuable supplementary information
 """
 )
