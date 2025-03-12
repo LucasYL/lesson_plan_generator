@@ -7,7 +7,7 @@ ARTIFACT_TYPES = {
         "name": "Quiz",
         "icon": "❓",
         "requirements": [
-            "Number of questions (1-5)",
+            "Number of questions (1-8)",
             "Difficulty level (Easy/Medium/Hard)",
             "Question types (Multiple choice/Short answer)",
             "Additional notes (Optional)"
@@ -31,7 +31,7 @@ ARTIFACT_TYPES = {
         "icon": "📊",
         "requirements": [
             "Slide style (Academic/Visual/Minimalist)",
-            "Number of slides (3-15)",
+            "Number of slides (1-10)",
             "Additional requirements (Optional)"
         ]
     }
@@ -83,7 +83,7 @@ class ArtifactModal:
             requirements["num_questions"] = st.number_input(
                 "Number of questions",
                 min_value=1,
-                max_value=5,
+                max_value=8,
                 value=3
             )
             requirements["difficulty"] = st.select_slider(
@@ -126,9 +126,9 @@ class ArtifactModal:
             )
             requirements["num_slides"] = st.number_input(
                 "Number of slides",
-                min_value=3,
-                max_value=15,
-                value=5
+                min_value=1,
+                max_value=10,
+                value=3
             )
             requirements["additional_requirements"] = st.text_area(
                 "Additional requirements (Optional)"
