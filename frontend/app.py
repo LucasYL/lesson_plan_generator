@@ -404,6 +404,71 @@ def generate_enhanced_plan():
             import traceback
             st.error(f"Detailed error: {traceback.format_exc()}")
 
+def export_learning_materials_to_markdown(plan_data):
+    """Convert learning materials to markdown format
+    
+    Args:
+        plan_data: The lesson plan data containing learning materials
+        
+    Returns:
+        str: Markdown formatted learning materials
+    """
+    if not plan_data or not plan_data.get("outline"):
+        return "No learning materials available."
+        
+    markdown_content = "# Learning Materials\n\n"
+    
+    has_materials = False
+    for phase in plan_data.get("outline", []):
+        if not phase.get("artifacts"):
+            continue
+            
+        has_materials = True
+        markdown_content += f"## {phase['phase']}\n\n"
+        
+        for artifact in phase["artifacts"]:
+            markdown_content += f"### {artifact['type'].title()}\n\n"
+            
+            if artifact['type'] == "quiz":
+                # Handle quiz content
+                try:
+                    quiz_content = artifact["content"]
+                    quiz_data = json.loads(quiz_content) if isinstance(quiz_content, str) else quiz_content
+                    
+                    markdown_content += f"#### {quiz_data['phase_name']} - Quiz\n\n"
+                    
+                    # Questions section
+                    markdown_content += "##### Questions\n\n"
+                    for question in quiz_data["quiz_data"]["questions"]:
+                        markdown_content += f"**Question {question['id']}**\n\n"
+                        markdown_content += f"{question['question']}\n\n"
+                        markdown_content += "**Options:**\n\n"
+                        for opt_key, opt_value in question["options"].items():
+                            markdown_content += f"- {opt_key}) {opt_value}\n"
+                        markdown_content += "\n"
+                    
+                    # Answers section
+                    markdown_content += "##### Answers & Explanations\n\n"
+                    for answer in quiz_data["quiz_data"]["answers"]:
+                        markdown_content += f"**Question {answer['id']}**\n\n"
+                        markdown_content += f"Correct Answer: {answer['correct_answer']}\n\n"
+                        markdown_content += "Explanation:\n\n"
+                        markdown_content += f"{answer['explanation']}\n\n"
+                        
+                except Exception as e:
+                    markdown_content += f"Error formatting quiz: {str(e)}\n\n"
+                    markdown_content += f"```\n{artifact['content']}\n```\n\n"
+            else:
+                # Handle other content types (code_practice, slides)
+                markdown_content += f"{artifact['content']}\n\n"
+                
+            markdown_content += "---\n\n"
+    
+    if not has_materials:
+        return "No learning materials have been generated yet."
+        
+    return markdown_content
+
 def display_learning_materials(broad_plan):
     """Display all learning materials for the course
     
@@ -421,7 +486,7 @@ def display_learning_materials(broad_plan):
         try:
             # Parse quiz data
             quiz_data = json.loads(quiz_content) if isinstance(quiz_content, str) else quiz_content
-            
+                
             # Display quiz title
             st.markdown(f"### {quiz_data['phase_name']} - Quiz")
             
@@ -437,7 +502,7 @@ def display_learning_materials(broad_plan):
                     for opt_key, opt_value in question["options"].items():
                         st.markdown(f"{opt_key}) {opt_value}")
                     st.markdown("---")
-            
+                
             # Display answers and explanations
             with answers_tab:
                 for answer in quiz_data["quiz_data"]["answers"]:
@@ -494,6 +559,11 @@ def display_learning_materials(broad_plan):
     
     if not has_materials:
         st.info("No learning materials have been generated yet. Click 'Generate Learning Materials' in any phase to create materials.")
+    else:
+        # 添加专门用于下载学习材料的按钮
+        st.markdown("### 📥 Download Learning Materials")
+        materials_markdown = export_learning_materials_to_markdown(broad_plan)
+        st.markdown(create_download_link(materials_markdown, "learning_materials.md", "📥 Download Materials as Markdown"), unsafe_allow_html=True)
 
 def display_broad_plan(plan):
     """Display the course outline"""
@@ -516,8 +586,13 @@ def display_broad_plan(plan):
         with st.container():
             st.header(UI_TEXT["plan_title"])
             
-            # Display learning objectives
+            # Add download button
             broad_plan = plan.get("broad_plan", {})
+            # if broad_plan:
+            #     add_download_button(broad_plan)
+            #     st.markdown("---")
+            
+            # Display learning objectives
             if broad_plan:
                 st.write("#### Learning Objectives")
                 for obj in broad_plan.get("objectives", []):
@@ -546,7 +621,7 @@ def display_broad_plan(plan):
                         if phase.get("description"):
                             st.write("**Description:**")
                             st.write(phase["description"])
-                            
+                        
                         # Add generate materials button
                         st.markdown("---")
                         col1, col2 = st.columns([2, 4])
@@ -568,6 +643,9 @@ def display_broad_plan(plan):
                 
                 # Render artifact dialog
                 artifact_modal.render_dialog()
+                
+                st.markdown("---")
+                add_download_button(broad_plan)
                 
                 # Add revise plan button
                 if st.button("✏️  Revise Plan", type="primary"):
@@ -597,7 +675,7 @@ def display_full_plan(plan):
         if plan is None:
             st.error("No plan data received")
             return
-            
+        
         # Parse the plan if it's a string
         if isinstance(plan, str):
             try:
@@ -667,6 +745,10 @@ def display_full_plan(plan):
         
         # Create container to display plan
         with st.container():
+            # Add download button
+            add_download_button(plan)
+            st.markdown("---")
+            
             # Display the full plan content
             if full_plan and isinstance(full_plan, dict):
                 content = full_plan.get("content")
@@ -723,6 +805,10 @@ def display_full_plan(plan):
                             st.markdown(f"_{slide['speaker_notes']}_")
                         
                         st.markdown("---")
+            
+            # 在底部再添加一个下载按钮
+            st.markdown("---")
+            add_download_button(plan)
             
             # Show error if neither full plan nor slides are available
             if not full_plan and not slides:
@@ -968,6 +1054,95 @@ def handle_artifact_generation(artifact_result, broad_plan):
     except Exception as e:
         st.error(f"Error generating material: {str(e)}")
         return False
+
+def export_to_markdown(plan_data):
+    """Export the lesson plan to Markdown format"""
+    # 如果plan_data是字符串，尝试解析为JSON
+    if isinstance(plan_data, str):
+        try:
+            plan_data = json.loads(plan_data)
+        except:
+            pass
+    
+    # 提取broad_plan如果存在
+    if isinstance(plan_data, dict):
+        if "broad_plan_draft" in plan_data:
+            try:
+                draft = plan_data["broad_plan_draft"]
+                if isinstance(draft, str):
+                    if "```json" in draft:
+                        json_content = draft.split("```json")[1].split("```")[0].strip()
+                        plan_data = json.loads(json_content)
+                    else:
+                        plan_data = json.loads(draft)
+            except:
+                pass
+        
+        if "broad_plan" in plan_data:
+            plan_data = plan_data["broad_plan"]
+    
+    # 开始构建Markdown内容
+    md_content = "# Lesson Plan\n\n"
+    
+    # 添加学习目标
+    md_content += "## Learning Objectives\n\n"
+    for obj in plan_data.get("objectives", []):
+        md_content += f"- {obj}\n"
+    md_content += "\n"
+    
+    # 添加教学阶段
+    md_content += "## Teaching Phases\n\n"
+    for i, phase in enumerate(plan_data.get("outline", [])):
+        md_content += f"### {phase['phase']} ({phase['duration']})\n\n"
+        
+        # 添加目的
+        if phase.get("purpose"):
+            md_content += f"**Purpose:** {phase['purpose']}\n\n"
+        
+        # 添加描述
+        if phase.get("description"):
+            md_content += f"**Description:** {phase['description']}\n\n"
+        
+        # 添加学习材料
+        if phase.get("artifacts"):
+            md_content += "#### Learning Materials\n\n"
+            for artifact in phase["artifacts"]:
+                md_content += f"##### {artifact['type'].title()}\n\n"
+                
+                # 根据类型格式化内容
+                if artifact['type'] == "quiz" and isinstance(artifact['content'], dict):
+                    # 格式化测验内容
+                    md_content += "**Questions:**\n\n"
+                    for j, question in enumerate(artifact['content'].get('questions', [])):
+                        md_content += f"{j+1}. {question.get('question', '')}\n"
+                        for option in question.get('options', []):
+                            md_content += f"   - {option}\n"
+                        md_content += f"   Answer: {question.get('answer', '')}\n\n"
+                else:
+                    # 对于代码练习、幻灯片等
+                    md_content += f"```\n{artifact['content']}\n```\n\n"
+    
+    return md_content
+
+def create_download_link(content, filename, link_text):
+    """Create a download link for text content"""
+    import base64
+    b64 = base64.b64encode(content.encode()).decode()
+    href = f'<a href="data:text/markdown;base64,{b64}" download="{filename}" style="display: inline-block; padding: 0.5rem 1rem; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">{link_text}</a>'
+    return href
+
+def add_download_button(plan_data):
+    """Add a download button for the lesson plan"""
+    if not plan_data:
+        return
+    
+    md_content = export_to_markdown(plan_data)
+    download_link = create_download_link(
+        md_content, 
+        "lesson_plan.md", 
+        "📥 Download Lesson Plan"
+    )
+    st.markdown(download_link, unsafe_allow_html=True)
 
 def main():
     """Main application entry point"""
