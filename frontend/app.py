@@ -194,7 +194,7 @@ def render_input_form():
         with left_col:
             display_broad_plan(st.session_state.broad_plan)
             
-            # 暂时注释掉这些按钮
+            # 
             # Display generate buttons
             # if st.session_state.show_buttons:
             #     if st.button("Generate Full Plan", key="full_plan_btn"):
