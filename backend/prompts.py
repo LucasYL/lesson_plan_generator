@@ -438,23 +438,11 @@ Requirements:
 
 Format your output in the following structure:
 
-### Understanding [Algorithm/Concept Name]
-### Code_Practice
-
-#### Learning Objectives
-- [Primary skill or concept being practiced]
-- [Secondary objectives - keep these brief and focused]
-
 #### Coding Exercise: [Exercise Name]
-[Brief introduction to the exercise - 1-2 sentences maximum]
-
-#### Problem Description
-[Concise description of the problem to solve - keep this short and clear]
-
-#### Requirements
-- [Input/output requirements]
-- [Constraints or special conditions]
-- [Performance expectations if relevant]
+[Write a introduction that:
+1. Clearly explains what the exercise is about and what students will be implementing
+2. Describes the purpose of this exercise - why it's important for students to learn this concept/skill
+Keep this introduction concise but informative.]
 
 #### Starter Code
 ```{programming_language}
@@ -528,52 +516,65 @@ Please output the slide content in the following structure:
 
 ### Slides: [Topic Name]
 
-#### Slide Overview
-- Main objectives and content summary of this slide set (2-3 sentences)
-- Suggested teaching approach (how to use these slides for instruction)
-
 #### Slide Content
 
-##### Slide 1: [Title]
+##### Slide 1: [Title - Make this engaging and clear]
 **Content:**
-- [Point 1]
-- [Point 2]
-- [Point 3]
+- [Key point 1 - Keep concise but informative]
+- [Key point 2 - Consider using the "what, why, how" structure]
+- [Key point 3 - Include a thought-provoking question to engage students]
+
+**Visual Elements:**
+- [Suggest a specific image/diagram that would enhance understanding]
+- [Describe any charts/graphs that would illustrate the concept]
+- [Recommend animation sequence if applicable]
 
 **Instructor Notes:**
-[Suggestions for explaining this slide, including emphasis points, potential questions, and discussion points]
+[Brief guidance on delivering this slide, including key emphasis points and potential student engagement techniques]
 
 ##### Slide 2: [Title]
 **Content:**
-- [Point 1]
-- [Point 2]
-- [Chart/Image description]
+- [Key point 1]
+- [Key point 2]
+- [Interactive element - e.g., "Pause for a 2-minute pair discussion on..."]
+
+**Visual Elements:**
+- [Suggest specific visual that complements the content]
+- [Recommend layout for optimal learning]
 
 **Instructor Notes:**
-[Suggestions for explaining this slide]
+[Concise delivery guidance including timing and transition to next slide]
 
 // Continue based on the required number of slides...
 
-##### Slide [N]: [Title]
+##### Slide [N]: [Title - Make the final slide conclusive]
 **Content:**
-- [Point 1]
-- [Point 2]
-- [Summary/Next steps]
+- [Summary of key points]
+- [Application or next steps]
+- [Call to action or reflection prompt for students]
+
+**Visual Elements:**
+- [Suggest a visual that reinforces the main takeaway]
+- [Consider a memorable final image or diagram]
 
 **Instructor Notes:**
-[Suggestions for explaining this slide]
+[Brief guidance on concluding the presentation effectively]
 
 #### Design Recommendations
-- [Color scheme suggestions]
-- [Font and typography recommendations]
-- [Image/chart usage recommendations]
-- [Interactive element suggestions]
+- [Color scheme suggestions aligned with content mood/tone]
+- [Font and typography recommendations for readability]
+- [Image/chart usage recommendations with specific examples]
+- [Interactive element suggestions that enhance learning]
+- [Accessibility considerations]
 
 Important notes:
 1. Ensure each slide's content is concise, with each point not exceeding 1-2 lines
-2. Content should directly support learning objectives
+2. Content should directly support the specific learning objectives
 3. Use clear hierarchy and visual organization
-4. Include appropriate charts, image descriptions, or examples
-5. Instructor notes should provide valuable supplementary information
+4. Naturally incorporate engagement strategies throughout (questions, activities, discussions)
+5. Balance text with visual elements on each slide
+6. Create a narrative flow from beginning to end
+7. For each slide, suggest specific visual elements that enhance learning, not just decorative
+8. Keep instructor notes brief but actionable
 """
 )
