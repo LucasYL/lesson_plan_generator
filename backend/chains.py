@@ -7,9 +7,8 @@ import json
 # Local application imports
 from .prompts import (
     BROAD_PLAN_DRAFT_TEMPLATE,
-    FULL_PLAN_DRAFT_TEMPLATE,
-    FULL_PLAN_CRITIQUE_TEMPLATE,
-    FULL_PLAN_REVISE_TEMPLATE,
+    CRITIQUE_TEMPLATE,
+    REVISE_TEMPLATE,
     QUIZ_GENERATION_TEMPLATE,
     CODE_PRACTICE_GENERATION_TEMPLATE,
     SLIDES_GENERATION_TEMPLATE
@@ -20,11 +19,11 @@ __all__ = [
     'get_llm',
     'get_openrouter_llm',
     'create_broad_plan_draft_chain',
-    'create_full_plan_chains',
+    'create_revise_plan_chain',
     'create_artifact_chain'
 ]
 
-def get_llm(model_name="gpt-4o", temperature=0.7):
+def get_llm(model_name="gpt-4o", temperature=0.5):
     """Return a ChatOpenAI LLM."""
     return ChatOpenAI(model_name=model_name, temperature=temperature)
 
@@ -51,29 +50,39 @@ def create_broad_plan_draft_chain(llm):
         output_key="broad_plan_draft"
     )
 
-def create_full_plan_chains(llm_draft, llm_critique, llm_revise):
+def create_revise_plan_chain(llm_critique, llm_revise):
     """
-    Create chains for: 
-      - Drafting the full plan,
-      - Critiquing the full plan,
-      - Revising the full plan.
+    Create a chain for revising a broad plan based on critique.
+    
+    This function creates two internal chains:
+    1. A critique chain to analyze the plan
+    2. A revise chain to improve the plan based on critique
+    
+    But only returns the revise chain for external use.
+    
+    Args:
+        llm_critique: Language model for critique generation
+        llm_revise: Language model for revision
+        
+    Returns:
+        LLMChain: The revise chain that can be used to improve plans
     """
-    draft_chain = LLMChain(
-        llm=llm_draft,
-        prompt=FULL_PLAN_DRAFT_TEMPLATE,
-        output_key="full_plan_draft"
-    )
+    # Create critique chain (internal use only)
     critique_chain = LLMChain(
         llm=llm_critique,
-        prompt=FULL_PLAN_CRITIQUE_TEMPLATE,
+        prompt=CRITIQUE_TEMPLATE,
         output_key="critique"
     )
+    
+    # Create revision chain
     revise_chain = LLMChain(
         llm=llm_revise,
-        prompt=FULL_PLAN_REVISE_TEMPLATE,
+        prompt=REVISE_TEMPLATE,
         output_key="revised_plan"
     )
-    return draft_chain, critique_chain, revise_chain
+    
+    # Only return the revise chain
+    return revise_chain
 
 def create_artifact_chain(llm, artifact_type: str):
     """Create a chain for generating specific type of artifact

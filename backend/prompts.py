@@ -55,6 +55,7 @@ TASK:
    - Map content to learning objectives
    - Ensure at least 60% of lesson content is based on references
    - Mark all reference-based content with [REF]
+   - If there is no reference material, no [REF] should be used
 
 2) Process User Feedback and Phase Changes:
    - User feedback has the highest priority
@@ -129,64 +130,15 @@ CONSTRAINTS:
 
 
 # ==========================================
-# B) FULL PLAN (Draft, Critique, Revise)
+# B) RVISE PLAN (Critique, Revise)
 # ==========================================
-FULL_PLAN_DRAFT_TEMPLATE = PromptTemplate(
+CRITIQUE_TEMPLATE = PromptTemplate(
     input_variables=["broad_plan_json"],
     template="""
-You are an expert instructional designer tasked with creating a detailed lesson plan based on an approved outline.
-
-### **1) ANALYZE THE OUTLINE**
-{broad_plan_json}
-
-### **2) DEVELOP DETAILED PLAN**
-Follow these principles strictly:
-1. Maintain exact phase names and time allocations from the outline
-2. Expand each phase while preserving its core structure and objectives
-3. Provide appropriate details based on activity type:
-   - Programming Tasks: Focus on algorithm logic, key concepts, and implementation strategies
-   - Group Activities: Detail facilitation methods, discussion prompts, and expected outcomes
-   - Demonstrations: Specify demonstration flow and highlight critical observations
-   - Theoretical Content: Structure key concepts and provide relevant examples
-
-### **OUTPUT FORMAT (JSON)**
-{{
-  "full_plan": {{
-    "content": [
-      {{
-        "phase": "Exact phase name from outline",
-        "duration": "Same duration as outline",
-        "activities": [
-          {{
-            "type": "lecture/discussion/exercise/demonstration",
-            "instructions": "Detailed step-by-step instructions for conducting the activity",
-            "notes": "Guidance for the instructor on managing the activity",
-            "success_criteria": "Specific indicators of successful completion"
-          }}
-        ]
-      }}
-    ]
-  }}
-}}
-
-### **REQUIREMENTS**
-1. Phase names and durations must exactly match the outline
-2. Each phase should contain 1-3 well-defined activities
-3. Instructions must be specific and actionable
-4. Success criteria should be measurable
-5. Include practical guidance for instructors
-6. Output valid JSON only, no additional text
-"""
-)
-
-
-FULL_PLAN_CRITIQUE_TEMPLATE = PromptTemplate(
-   input_variables=["full_plan_json"],
-   template="""
 You are an expert educational consultant reviewing a detailed lesson plan.
 
 ### **ANALYZE THE PLAN**
-{full_plan_json}
+{broad_plan_json}
 
 ### **EVALUATION CRITERIA**
 1. Content Quality
@@ -246,71 +198,48 @@ IMPORTANT: Do NOT suggest changes to:
 )
 
 
-FULL_PLAN_REVISE_TEMPLATE = PromptTemplate(
-    input_variables=["full_plan_json", "critique_text"],
+REVISE_TEMPLATE = PromptTemplate(
+    input_variables=["broad_plan_json", "critique_text"],
     template="""
 You are an expert instructional designer improving a lesson plan based on professional critique.
 
 ### **1) REVIEW ORIGINAL PLAN**
-{full_plan_json}
+{broad_plan_json}
 
 ### **2) ANALYZE CRITIQUE**
 {critique_text}
 
 ### **3) IMPROVE THE PLAN**
 Apply the critique while following these rules:
-1. Maintain exact phase names and durations
-2. Keep the same activity types
-3. Improve instructions, notes, and success criteria
-4. Enhance engagement and clarity
-5. Address specific critique points
-
-### **4) GENERATE PRESENTATION SLIDES**
-Create a slide outline that:
-1. Follows the phase structure exactly
-2. Includes key content from each phase
-3. Provides clear speaker notes for delivery
-4. Uses concise bullet points for main ideas
+1. You CAN add new phases if the critique suggests the plan needs more activities
+2. You CAN modify phase names and durations if the critique suggests improvements
+3. Improve phase purposes and descriptions based on critique feedback
+4. Enhance alignment with learning objectives
+5. Address all specific critique points thoroughly
 
 ### **OUTPUT FORMAT (JSON)**
 {{
-  "full_plan": {{
-    "content": [
+  "broad_plan": {{
+    "objectives": [
+      "Improved learning objectives based on critique"
+    ],
+    "outline": [
       {{
-        "phase": "Exact phase name from original",
-        "duration": "Same duration as original",
-        "activities": [
-          {{
-            "type": "Same type as original",
-            "instructions": "Improved step-by-step instructions",
-            "notes": "Enhanced guidance for instructor",
-            "success_criteria": "Refined success indicators",
-          }}
-        ]
+        "phase": "Phase name (can be modified based on critique)",
+        "duration": "Duration (can be adjusted based on critique)",
+        "purpose": "Enhanced purpose statement addressing critique points",
+        "description": "Improved description with more clarity and detail"
       }}
     ]
-  }},
-  "slides": [
-    {{
-      "number": "Slide number (starting from 1)",
-      "title": "Clear, concise slide title",
-      "bullet_points": [
-        "Key points from the phase content",
-        "Important concepts or steps",
-        "Relevant examples or activities"
-      ],
-      "speaker_notes": "notes for instructor delivery"
-    }}
-  ]
+  }}
 }}
 
 ### **REQUIREMENTS**
-1. Preserve all phase names and durations exactly
-2. Maintain activity types within each phase
-3. Focus improvements on content and clarity
-4. Address critique points without structural changes
-5. Ensure slides align with phase content
-6. Output valid JSON only
+1. Make meaningful improvements based on the critique
+2. Ensure the total duration still matches the original plan's total time
+3. Focus on improving content quality, clarity, and student engagement
+4. Address all critique points comprehensively
+5. Output valid JSON only, no additional text
 """
 )
 

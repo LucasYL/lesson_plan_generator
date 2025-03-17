@@ -64,16 +64,22 @@ class ArtifactModal:
         st.session_state.show_artifact_dialog = True
         st.session_state.generate_callback = generate_callback
         
-    @st.dialog("Generate Learning Material", width="large")
+    @st.dialog("📦 Generate Learning Material", width="large")
     def _show_dialog(self) -> None:
-        """Show the dialog content"""
-        st.markdown("### Select Material Type")
-        
-        # 1. Type selection
+        """显示学习材料生成对话框"""
+        if not st.session_state.show_artifact_dialog:
+            return
+            
+        # 1. 选择材料类型
+        st.markdown("### 📋 Select Material Type")
         artifact_type = st.selectbox(
-            "Select artifact type",
-            options=list(ARTIFACT_TYPES.keys()),
-            format_func=lambda x: f"{ARTIFACT_TYPES[x]['icon']} {ARTIFACT_TYPES[x]['name']}"
+            "Material Type",
+            options=["quiz", "code_practice", "slides"],
+            format_func=lambda x: {
+                "quiz": "Quiz / Assessment",
+                "code_practice": "Coding Exercise",
+                "slides": "Presentation Slides"
+            }.get(x, x)
         )
         
         requirements = {}
@@ -137,7 +143,7 @@ class ArtifactModal:
         # 3. Generate and Cancel buttons
         col1, col2 = st.columns([1, 1])
         with col1:
-            if st.button("Generate", type="primary"):
+            if st.button("✨ Generate", type="primary"):
                 # 准备生成参数
                 artifact_params = {
                     "type": artifact_type,
@@ -155,7 +161,7 @@ class ArtifactModal:
                 st.rerun()
         
         with col2:
-            if st.button("Cancel"):
+            if st.button("❌ Cancel"):
                 st.session_state.show_artifact_dialog = False
                 st.rerun()
         
