@@ -97,7 +97,7 @@ def init_session_state():
             'phases': [],
             'feedback': ""
         }
-    # 教学风格详情对话框状态
+    # Teaching style info dialog state
     if 'show_style_info' not in st.session_state:
         st.session_state.show_style_info = False
     if 'selected_style_info' not in st.session_state:
@@ -116,11 +116,11 @@ def render_input_form():
     # Create two-column layout
     left_col, right_col = st.columns([2, 1])
     
-    # 存储当前选择的教学风格
+    # Store current selected teaching style
     current_style = st.session_state.form_data["style"] if st.session_state.form_data["style"] else TEACHING_STYLES[0]["name"]
     
     with left_col:
-        # 在表单外部先显示教学风格选择
+        # Display teaching style selection outside the form
         st.markdown(f"""
         <div style="margin-bottom: 10px; background-color: #f8f9fa; padding: 0.5rem; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.08);">
             <span style="font-size: 0.9rem; font-weight: 500; color: #31333F; margin-left: 18px;">
@@ -129,10 +129,10 @@ def render_input_form():
             <div style="margin-top: 4px;">
         """, unsafe_allow_html=True)
         
-        # 使用Streamlit的radio组件来选择教学风格
+        # Use Streamlit's radio component to select teaching style
         style_names = [style["name"] for style in TEACHING_STYLES]
         selected_style = st.radio(
-            label="选择教学风格",
+            label="Select Teaching Style",
             options=style_names,
             index=style_names.index(current_style) if current_style in style_names else 0,
             horizontal=True,
@@ -144,10 +144,10 @@ def render_input_form():
         </div>
         """, unsafe_allow_html=True)
         
-        # 如果选择了新的风格，更新session state
+        # If a new style is selected, update session state
         if selected_style != current_style:
             st.session_state.form_data["style"] = selected_style
-            # 找到对应的风格对象
+            # Find the corresponding style object
             for style_obj in TEACHING_STYLES:
                 if style_obj["name"] == selected_style:
                     st.session_state.selected_style_info = style_obj
@@ -155,12 +155,12 @@ def render_input_form():
                     break
             st.rerun()
         
-        # 开始表单
+        # Start the form
         with st.form(key="lesson_plan_input"):
-            # 隐藏字段，用于传递选中的教学风格
+            # Hidden field to pass the selected teaching style
             style = selected_style
             
-            # 第一排：Education Level 和 Duration
+            # First row: Education Level and Duration
             col1, col2 = st.columns(2)
             
             with col1:
@@ -177,7 +177,7 @@ def render_input_form():
                     value=st.session_state.form_data["duration"] if st.session_state.form_data["duration"] else "40",
                 )
             
-            # 第二排：Topic 占整行
+            # Second row: Topic takes the full width
             topic = st.text_input(
                 UI_TEXT["topic"],
                 value=st.session_state.form_data["topic"] if st.session_state.form_data["topic"] else "",
@@ -236,10 +236,10 @@ def render_input_form():
                     placeholder="Example:\n1. Group discussion required\n2. Include practical exercises\n3. Include assessment"
                 )
             
-            # 确保提交按钮正确显示
+            # Ensure submit button displays correctly
             submitted = st.form_submit_button(label=UI_TEXT["generate_button"])
     
-    # 显示教学风格详情对话框
+    # Display teaching style info dialog
     if st.session_state.show_style_info and st.session_state.selected_style_info:
         with st.sidebar:
             st.subheader(f"About {st.session_state.selected_style_info['name']} Teaching Style")
@@ -501,7 +501,7 @@ def display_learning_materials(broad_plan):
     if not has_materials:
         st.info("No learning materials have been generated yet. Click 'Generate Learning Materials' in any phase to create materials.")
     else:
-        # 添加专门用于下载学习材料的按钮
+        # Add dedicated button for downloading learning materials
         st.markdown("### 📥 Download Learning Materials")
         materials_markdown = export_learning_materials_to_markdown(broad_plan)
         st.markdown(create_download_link(materials_markdown, "learning_materials.md", "📥 Download Materials as Markdown"), unsafe_allow_html=True)
