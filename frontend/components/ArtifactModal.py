@@ -144,7 +144,7 @@ class ArtifactModal:
         col1, col2 = st.columns([1, 1])
         with col1:
             if st.button("✨ Generate", type="primary"):
-                # 准备生成参数
+                # generate artifact
                 artifact_params = {
                     "type": artifact_type,
                     "phase_id": st.session_state.current_phase_id,
@@ -152,7 +152,7 @@ class ArtifactModal:
                     "requirements": requirements
                 }
                 
-                # 关闭对话框
+                # close dialog
                 st.session_state.show_artifact_dialog = False
                 
                 # 从session_state获取并调用回调函数
