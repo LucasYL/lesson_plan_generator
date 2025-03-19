@@ -155,7 +155,7 @@ class ArtifactModal:
                 # close dialog
                 st.session_state.show_artifact_dialog = False
                 
-                # 从session_state获取并调用回调函数
+                # call generate callback
                 if st.session_state.generate_callback:
                     st.session_state.generate_callback(artifact_params)
                 st.rerun()
