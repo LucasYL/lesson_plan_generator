@@ -119,14 +119,14 @@ def render_input_form():
     # Store current selected teaching style
     current_styles = st.session_state.form_data["style"] if st.session_state.form_data["style"] else [TEACHING_STYLES[0]["name"]]
     if not isinstance(current_styles, list):
-        current_styles = [current_styles]  # 兼容旧版本数据
+        current_styles = [current_styles]  # Compatible with old version data
     
     with left_col:
         # Display teaching style selection outside the form
         st.markdown(f"""
         <div style="margin-bottom: 10px; background-color: #f8f9fa; padding: 0.5rem; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.08);">
             <span style="font-size: 0.9rem; font-weight: 500; color: #31333F; margin-left: 18px;">
-                {UI_TEXT["teaching_style"]} (最多选择3种)
+                {UI_TEXT["teaching_style"]} (Select up to 3)
             </span>
             <div style="margin-top: 4px;">
         """, unsafe_allow_html=True)
@@ -134,7 +134,7 @@ def render_input_form():
         # Use Streamlit's multiselect component to select teaching styles
         style_names = [style["name"] for style in TEACHING_STYLES]
         selected_styles = st.multiselect(
-            label="选择教学风格",
+            label="Select Teaching Styles",
             options=style_names,
             default=current_styles,
             max_selections=3,
@@ -144,9 +144,9 @@ def render_input_form():
         # Ensure at least one style is selected
         if not selected_styles:
             selected_styles = [TEACHING_STYLES[0]["name"]]
-            st.warning("至少需要选择一种教学风格。已默认选择第一种风格。")
+            st.warning("At least one teaching style is required. The first style has been selected by default.")
         elif len(selected_styles) > 1:
-            st.info("您选择了多种教学风格，生成的课程计划将融合这些风格的特点。")
+            st.info("You have selected multiple teaching styles. The generated lesson plan will incorporate features from all selected styles.")
         
         st.markdown("""
             </div>
@@ -257,7 +257,7 @@ def render_input_form():
     # Display teaching style info dialog
     if st.session_state.show_style_info and st.session_state.selected_style_info:
         with st.sidebar:
-            # 添加一些CSS样式来优化选项卡显示
+            # Add some CSS styles to optimize tabs display
             st.markdown("""
             <style>
             .stTabs [data-baseweb="tab-list"] {
@@ -276,29 +276,29 @@ def render_input_form():
             </style>
             """, unsafe_allow_html=True)
             
-            st.subheader(f"关于所选教学风格")
+            st.subheader(f"About Selected Teaching Styles")
             
-            # 如果选择了多种风格，添加组合说明
+            # If multiple styles are selected, add combination description
             if len(st.session_state.selected_style_info) > 1:
                 st.markdown("""
                 <div style="background-color: #f0f7fb; padding: 10px; border-left: 4px solid #2196F3; margin-bottom: 15px;">
                     <p style="margin: 0; font-size: 0.9rem;">
-                        <strong>组合多种教学风格</strong>：系统将综合各种风格的优点，创建一个融合了这些方法的教学计划。
+                        <strong>Combining Multiple Teaching Styles</strong>: The system will integrate the strengths of each style to create a lesson plan that incorporates these teaching methods.
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
             
-            # 创建选项卡以显示所有选中的教学风格描述
+            # Create tabs to display all selected teaching style descriptions
             if len(st.session_state.selected_style_info) > 1:
                 tabs = st.tabs([style_info['name'] for style_info in st.session_state.selected_style_info])
                 for i, tab in enumerate(tabs):
                     with tab:
                         st.write(st.session_state.selected_style_info[i]["description"])
             else:
-                # 如果只有一种风格，直接显示描述
+                # If only one style is selected, directly display the description
                 st.write(st.session_state.selected_style_info[0]["description"])
                 
-            if st.button("❌ 关闭"):
+            if st.button("❌ Close"):
                 st.session_state.show_style_info = False
                 st.session_state.selected_style_info = None
                 st.rerun()
@@ -370,7 +370,7 @@ def generate_lesson_plan(grade_level, topic, duration, styles, objectives, requi
                 "grade_level": grade_level,
                 "topic": topic,
                 "duration": duration,
-                "style": styles_json,  # 传递JSON格式的多种教学风格
+                "style": styles_json,  # Pass JSON formatted multiple teaching styles
                 "learning_objectives": objectives_json,
                 "requirements": requirements_json,
                 "broad_plan_feedback": "",

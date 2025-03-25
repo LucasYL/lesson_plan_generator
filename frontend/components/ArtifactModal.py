@@ -144,7 +144,7 @@ class ArtifactModal:
         col1, col2 = st.columns([1, 1])
         with col1:
             if st.button("✨ Generate", type="primary"):
-                # generate artifact
+                # Generate artifact
                 artifact_params = {
                     "type": artifact_type,
                     "phase_id": st.session_state.current_phase_id,
@@ -152,10 +152,10 @@ class ArtifactModal:
                     "requirements": requirements
                 }
                 
-                # close dialog
+                # Close dialog
                 st.session_state.show_artifact_dialog = False
                 
-                # call generate callback
+                # Call generate callback
                 if st.session_state.generate_callback:
                     st.session_state.generate_callback(artifact_params)
                 st.rerun()
