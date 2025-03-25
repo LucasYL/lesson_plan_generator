@@ -170,6 +170,19 @@ def render_input_form():
             
             st.rerun()
         
+        # Always show style info for initial selection
+        if not st.session_state.show_style_info and selected_styles:
+            selected_style_infos = []
+            for style_name in selected_styles:
+                for style_obj in TEACHING_STYLES:
+                    if style_obj["name"] == style_name:
+                        selected_style_infos.append(style_obj)
+                        break
+            
+            if selected_style_infos:
+                st.session_state.selected_style_info = selected_style_infos
+                st.session_state.show_style_info = True
+        
         # Start the form
         with st.form(key="lesson_plan_input"):
             # Hidden field to pass the selected teaching styles
@@ -189,7 +202,7 @@ def render_input_form():
             with col2:
                 duration = st.text_input(
                     UI_TEXT["duration"], 
-                    value=st.session_state.form_data["duration"] if st.session_state.form_data["duration"] else "40",
+                    value=st.session_state.form_data["duration"] if st.session_state.form_data["duration"] else "60",
                 )
             
             # Second row: Topic takes the full width
@@ -276,7 +289,12 @@ def render_input_form():
             </style>
             """, unsafe_allow_html=True)
             
-            st.subheader(f"About Selected Teaching Styles")
+            # Show different title based on number of selected styles
+            if len(st.session_state.selected_style_info) > 1:
+                st.subheader(f"About Selected Teaching Styles")
+            else:
+                style_name = st.session_state.selected_style_info[0]["name"]
+                st.subheader(f"About {style_name} Teaching Style")
             
             # If multiple styles are selected, add combination description
             if len(st.session_state.selected_style_info) > 1:
@@ -297,11 +315,6 @@ def render_input_form():
             else:
                 # If only one style is selected, directly display the description
                 st.write(st.session_state.selected_style_info[0]["description"])
-                
-            if st.button("❌ Close"):
-                st.session_state.show_style_info = False
-                st.session_state.selected_style_info = None
-                st.rerun()
     
     # Display broad plan and buttons if available
     if st.session_state.broad_plan:
