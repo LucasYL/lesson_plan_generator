@@ -117,48 +117,63 @@ def render_input_form():
     left_col, right_col = st.columns([2, 1])
     
     # Store current selected teaching style
-    current_style = st.session_state.form_data["style"] if st.session_state.form_data["style"] else TEACHING_STYLES[0]["name"]
+    current_styles = st.session_state.form_data["style"] if st.session_state.form_data["style"] else [TEACHING_STYLES[0]["name"]]
+    if not isinstance(current_styles, list):
+        current_styles = [current_styles]  # 兼容旧版本数据
     
     with left_col:
         # Display teaching style selection outside the form
         st.markdown(f"""
         <div style="margin-bottom: 10px; background-color: #f8f9fa; padding: 0.5rem; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.08);">
             <span style="font-size: 0.9rem; font-weight: 500; color: #31333F; margin-left: 18px;">
-                {UI_TEXT["teaching_style"]}
+                {UI_TEXT["teaching_style"]} (最多选择3种)
             </span>
             <div style="margin-top: 4px;">
         """, unsafe_allow_html=True)
         
-        # Use Streamlit's radio component to select teaching style
+        # Use Streamlit's multiselect component to select teaching styles
         style_names = [style["name"] for style in TEACHING_STYLES]
-        selected_style = st.radio(
-            label="Select Teaching Style",
+        selected_styles = st.multiselect(
+            label="选择教学风格",
             options=style_names,
-            index=style_names.index(current_style) if current_style in style_names else 0,
-            horizontal=True,
+            default=current_styles,
+            max_selections=3,
             label_visibility="collapsed"
         )
+        
+        # Ensure at least one style is selected
+        if not selected_styles:
+            selected_styles = [TEACHING_STYLES[0]["name"]]
+            st.warning("至少需要选择一种教学风格。已默认选择第一种风格。")
+        elif len(selected_styles) > 1:
+            st.info("您选择了多种教学风格，生成的课程计划将融合这些风格的特点。")
         
         st.markdown("""
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # If a new style is selected, update session state
-        if selected_style != current_style:
-            st.session_state.form_data["style"] = selected_style
-            # Find the corresponding style object
-            for style_obj in TEACHING_STYLES:
-                if style_obj["name"] == selected_style:
-                    st.session_state.selected_style_info = style_obj
-                    st.session_state.show_style_info = True
-                    break
+        # If styles selection has changed, update session state
+        if set(selected_styles) != set(current_styles):
+            st.session_state.form_data["style"] = selected_styles
+            # Find the corresponding style objects for all selected styles
+            selected_style_infos = []
+            for style_name in selected_styles:
+                for style_obj in TEACHING_STYLES:
+                    if style_obj["name"] == style_name:
+                        selected_style_infos.append(style_obj)
+                        break
+            
+            if selected_style_infos:
+                st.session_state.selected_style_info = selected_style_infos
+                st.session_state.show_style_info = True
+            
             st.rerun()
         
         # Start the form
         with st.form(key="lesson_plan_input"):
-            # Hidden field to pass the selected teaching style
-            style = selected_style
+            # Hidden field to pass the selected teaching styles
+            styles = selected_styles
             
             # First row: Education Level and Duration
             col1, col2 = st.columns(2)
@@ -242,9 +257,48 @@ def render_input_form():
     # Display teaching style info dialog
     if st.session_state.show_style_info and st.session_state.selected_style_info:
         with st.sidebar:
-            st.subheader(f"About {st.session_state.selected_style_info['name']} Teaching Style")
-            st.write(st.session_state.selected_style_info["description"])
-            if st.button("❌ Close"):
+            # 添加一些CSS样式来优化选项卡显示
+            st.markdown("""
+            <style>
+            .stTabs [data-baseweb="tab-list"] {
+                gap: 8px;
+            }
+            .stTabs [data-baseweb="tab"] {
+                height: 40px;
+                white-space: normal;
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            .stTabs [aria-selected="true"] {
+                background-color: rgba(0, 0, 0, 0.05);
+                border-radius: 4px 4px 0 0;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            st.subheader(f"关于所选教学风格")
+            
+            # 如果选择了多种风格，添加组合说明
+            if len(st.session_state.selected_style_info) > 1:
+                st.markdown("""
+                <div style="background-color: #f0f7fb; padding: 10px; border-left: 4px solid #2196F3; margin-bottom: 15px;">
+                    <p style="margin: 0; font-size: 0.9rem;">
+                        <strong>组合多种教学风格</strong>：系统将综合各种风格的优点，创建一个融合了这些方法的教学计划。
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # 创建选项卡以显示所有选中的教学风格描述
+            if len(st.session_state.selected_style_info) > 1:
+                tabs = st.tabs([style_info['name'] for style_info in st.session_state.selected_style_info])
+                for i, tab in enumerate(tabs):
+                    with tab:
+                        st.write(st.session_state.selected_style_info[i]["description"])
+            else:
+                # 如果只有一种风格，直接显示描述
+                st.write(st.session_state.selected_style_info[0]["description"])
+                
+            if st.button("❌ 关闭"):
                 st.session_state.show_style_info = False
                 st.session_state.selected_style_info = None
                 st.rerun()
@@ -273,7 +327,7 @@ def render_input_form():
             "grade_level": grade_level,
             "topic": topic,
             "duration": duration,
-            "style": style,
+            "style": styles,
             "objectives": objectives_list,
             "requirements": requirements_list,
             "example": example.strip() if example else ""
@@ -287,12 +341,12 @@ def render_input_form():
             grade_level,
             topic,
             duration,
-            style,
+            styles,
             objectives_list,
             requirements_list
         )
 
-def generate_lesson_plan(grade_level, topic, duration, style, objectives, requirements):
+def generate_lesson_plan(grade_level, topic, duration, styles, objectives, requirements):
     """Generate the lesson plan"""
     with st.spinner(UI_TEXT["generating_message"]):
         try:
@@ -308,12 +362,15 @@ def generate_lesson_plan(grade_level, topic, duration, style, objectives, requir
             objectives_json = json.dumps(objectives) if isinstance(objectives, list) else objectives
             requirements_json = json.dumps(requirements) if isinstance(requirements, list) else requirements
             
+            # Convert styles list to JSON string
+            styles_json = json.dumps(styles) if isinstance(styles, list) else json.dumps([styles])
+            
             # Generate broad plan
             broad_result = broad_chain.invoke({
                 "grade_level": grade_level,
                 "topic": topic,
                 "duration": duration,
-                "style": style,
+                "style": styles_json,  # 传递JSON格式的多种教学风格
                 "learning_objectives": objectives_json,
                 "requirements": requirements_json,
                 "broad_plan_feedback": "",
@@ -810,7 +867,7 @@ def revision_dialog():
                     "grade_level": st.session_state.form_data["grade_level"],
                     "topic": st.session_state.form_data["topic"],
                     "duration": st.session_state.form_data["duration"],
-                    "style": st.session_state.form_data["style"],
+                    "style": json.dumps(st.session_state.form_data["style"]) if isinstance(st.session_state.form_data["style"], list) else json.dumps([st.session_state.form_data["style"]]),
                     "learning_objectives": json.dumps(st.session_state.form_data["objectives"], ensure_ascii=False),
                     "requirements": json.dumps(st.session_state.form_data["requirements"], ensure_ascii=False),
                     "broad_plan_feedback": json.dumps(combined_feedback, ensure_ascii=False),
