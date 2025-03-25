@@ -66,11 +66,11 @@ class ArtifactModal:
         
     @st.dialog("📦 Generate Learning Material", width="large")
     def _show_dialog(self) -> None:
-        """显示学习材料生成对话框"""
+        """Display the learning material generation dialog"""
         if not st.session_state.show_artifact_dialog:
             return
             
-        # 1. 选择材料类型
+        # 1. Select material type
         st.markdown("### 📋 Select Material Type")
         artifact_type = st.selectbox(
             "Material Type",

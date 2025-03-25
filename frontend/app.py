@@ -46,11 +46,11 @@ GRADE_LEVELS = [
 ]
 
 TEACHING_STYLES = [
-    {"name": "Lecture-based", "description": "Traditional approach where the instructor presents information to students. Effective for delivering structured content and theoretical knowledge to large groups."},
-    {"name": "Interactive", "description": "Engages students through discussions, Q&A sessions, and collaborative activities. Promotes active participation and deeper understanding through dialogue."},
-    {"name": "Practice-oriented", "description": "Focuses on hands-on application of concepts through exercises, projects, and problem-solving. Helps develop practical skills and reinforces theoretical knowledge."},
-    {"name": "Blended", "description": "Combines online and in-person learning experiences. Offers flexibility while maintaining personal interaction and guidance from the instructor."},
-    {"name": "Inquiry-based", "description": "Students explore topics through questions, investigations, and discoveries. Develops critical thinking and research skills by encouraging students to find answers independently."}
+    {"name": "Expert", "description": "A teacher-centered approach where teachers hold the knowledge and expertise that students need. Focuses on sharing knowledge, demonstrating knowledge, and providing feedback to promote learning."},
+    {"name": "Formal Authority", "description": "A teacher-centered approach that focuses on lecturing and the traditional teaching style. Goals and expectations are clearly defined and communicated. Offers a well-structured learning environment. Ideal for delivering large amounts of information in a timely manner. More suited for higher-education settings and larger classrooms. May not be suitable for all students and limits student engagement."},
+    {"name": "Personal Model", "description": "A teacher-centered approach that focuses on teaching with real-life and personal examples, with students observing and following directions. The teacher takes a coach or mentor role, making it a popular approach for subjects such as physical education or art. Highly hands-on method with direct observation and teachers guiding students. A key concern with this approach is the example being seen as an ideal which may result in students feeling incapable of meeting the standard."},
+    {"name": "Facilitator", "description": "A student-centered approach that focuses on facilitating critical thinking and guiding students to be independent learners through activities. Emphasizes teacher-student interactions for teachers to guide and direct students towards discovery, with students encouraged to ask questions and explore options. Requires more one-on-one interaction, making it harder to implement in larger classrooms."},
+    {"name": "Delegator", "description": "A student-centered approach where teachers take on more of an observer role with students working independently or in groups. Promotes collaboration between students and peer learning. Popular for practical lessons, such as science labs, or those ideal for peer feedback, such as creative writing. May not be suitable for all students, subjects, or grade levels, and requires careful management to ensure active participation from all students."}
 ]
 
 def init_session_state():
