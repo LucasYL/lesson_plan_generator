@@ -16,6 +16,9 @@ from backend.chains import get_llm, get_openrouter_llm
 from backend.chains import create_broad_plan_draft_chain
 from backend.chains import create_artifact_chain
 
+# For Teaching Styles and Instructional Strategies Info
+from components.InfoSidebar import render_sidebar
+
 # UI text constants
 UI_TEXT = {
     "title": "AI Lesson Plan Generator",
@@ -268,53 +271,8 @@ def render_input_form():
             submitted = st.form_submit_button(label=UI_TEXT["generate_button"])
     
     # Display teaching style info dialog
-    if st.session_state.show_style_info and st.session_state.selected_style_info:
-        with st.sidebar:
-            # Add some CSS styles to optimize tabs display
-            st.markdown("""
-            <style>
-            .stTabs [data-baseweb="tab-list"] {
-                gap: 8px;
-            }
-            .stTabs [data-baseweb="tab"] {
-                height: 40px;
-                white-space: normal;
-                padding-left: 10px;
-                padding-right: 10px;
-            }
-            .stTabs [aria-selected="true"] {
-                background-color: rgba(0, 0, 0, 0.05);
-                border-radius: 4px 4px 0 0;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            
-            # Show different title based on number of selected styles
-            if len(st.session_state.selected_style_info) > 1:
-                st.subheader(f"About Selected Teaching Styles")
-            else:
-                style_name = st.session_state.selected_style_info[0]["name"]
-                st.subheader(f"About {style_name} Teaching Style")
-            
-            # If multiple styles are selected, add combination description
-            if len(st.session_state.selected_style_info) > 1:
-                st.markdown("""
-                <div style="background-color: #f0f7fb; padding: 10px; border-left: 4px solid #2196F3; margin-bottom: 15px;">
-                    <p style="margin: 0; font-size: 0.9rem;">
-                        <strong>Combining Multiple Teaching Styles</strong>: The system will integrate the strengths of each style to create a lesson plan that incorporates these teaching methods.
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Create tabs to display all selected teaching style descriptions
-            if len(st.session_state.selected_style_info) > 1:
-                tabs = st.tabs([style_info['name'] for style_info in st.session_state.selected_style_info])
-                for i, tab in enumerate(tabs):
-                    with tab:
-                        st.write(st.session_state.selected_style_info[i]["description"])
-            else:
-                # If only one style is selected, directly display the description
-                st.write(st.session_state.selected_style_info[0]["description"])
+    with right_col:
+        render_sidebar()
     
     # Display broad plan and buttons if available
     if st.session_state.broad_plan:
