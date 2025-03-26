@@ -154,80 +154,66 @@ You are an expert educational consultant reviewing a detailed lesson plan.
    - Interaction opportunities
    - Learning assessment methods
 
-IMPORTANT: Do NOT suggest changes to:
-- Phase names or sequence
-- Time allocations
-- Core structure of the plan
-
-### **OUTPUT FORMAT (JSON)**
-{{
-  "critique": {{
-    "scores": {{
-      "content_quality": {{
-        "score": "1-5",
-        "strengths": ["List strong points"],
-        "areas_for_improvement": ["List specific areas to improve"]
-      }},
-      "implementation": {{
-        "score": "1-5",
-        "strengths": ["List strong points"],
-        "areas_for_improvement": ["List specific areas to improve"]
-      }},
-      "engagement": {{
-        "score": "1-5",
-        "strengths": ["List strong points"],
-        "areas_for_improvement": ["List specific areas to improve"]
-      }}
-    }},
-    "improvement_suggestions": [
-      {{
-        "phase": "Exact phase name",
-        "activity_type": "Type of activity to improve",
-        "suggestion": "Specific, actionable improvement"
-      }}
-    ]
+### **OUTPUT FORMAT**
+Your output must be a valid JSON array containing 3-5 critique points, each with the following structure:
+```json
+[
+  {{
+    "id": 1,
+    "issue": "Clear description of a specific issue in the lesson plan",
+    "suggestion": "Specific, actionable suggestion to address the issue"
+  }},
+  {{
+    "id": 2,
+    "issue": "Another clear issue description",
+    "suggestion": "Another specific improvement suggestion"
   }}
-}}
+]
+```
 
 ### **REQUIREMENTS**
-1. Maintain JSON format
-2. Provide specific, actionable feedback
-3. Focus on improving content within existing structure
-4. Do not suggest structural changes
+1. Each critique point must be specific and actionable
+2. Focus on meaningful improvements that enhance the educational value
+3. Provide a balanced analysis covering different aspects of the lesson plan
+4. Ensure suggestions are realistic and implementable
+5. NUMBER your critique points from 1 to however many you provide (3-5)
+6. STRICTLY follow the JSON format specified above
+7. Do NOT include any explanatory text outside the JSON structure
 """
 )
 
-
-REVISE_TEMPLATE = PromptTemplate(
-    input_variables=["broad_plan_json", "critique_text"],
+# Template for revising based on user-selected critique points
+REVISE_SELECTED_TEMPLATE = PromptTemplate(
+    input_variables=["broad_plan_json", "selected_critique_points"],
     template="""
-You are an expert instructional designer improving a lesson plan based on professional critique.
+You are an expert instructional designer improving a lesson plan based on selected critique points.
 
 ### **1) REVIEW ORIGINAL PLAN**
 {broad_plan_json}
 
-### **2) ANALYZE CRITIQUE**
-{critique_text}
+### **2) SELECTED CRITIQUE POINTS**
+{selected_critique_points}
 
 ### **3) IMPROVE THE PLAN**
-Apply the critique while following these rules:
-1. You CAN add new phases if the critique suggests the plan needs more activities
-2. You CAN modify phase names and durations if the critique suggests improvements
-3. Improve phase purposes and descriptions based on critique feedback
+Apply ONLY the selected critique points while following these rules:
+1. You CAN add new phases if the selected critique points suggest the plan needs more activities
+2. You CAN modify phase names and durations if the selected critique points suggest improvements
+3. Improve phase purposes and descriptions based on the selected feedback
 4. Enhance alignment with learning objectives
-5. Address all specific critique points thoroughly
+5. Address ONLY the selected critique points thoroughly
+6. Do NOT make changes related to critique points that were NOT selected
 
 ### **OUTPUT FORMAT (JSON)**
 {{
   "broad_plan": {{
     "objectives": [
-      "Improved learning objectives based on critique"
+      "Improved learning objectives based on selected critique points"
     ],
     "outline": [
       {{
-        "phase": "Phase name (can be modified based on critique)",
-        "duration": "Duration (can be adjusted based on critique)",
-        "purpose": "Enhanced purpose statement addressing critique points",
+        "phase": "Phase name (can be modified based on selected critique)",
+        "duration": "Duration (can be adjusted based on selected critique)",
+        "purpose": "Enhanced purpose statement addressing selected critique points",
         "description": "Improved description with more clarity and detail"
       }}
     ]
@@ -235,11 +221,10 @@ Apply the critique while following these rules:
 }}
 
 ### **REQUIREMENTS**
-1. Make meaningful improvements based on the critique
+1. Make meaningful improvements based ONLY on the selected critique points
 2. Ensure the total duration still matches the original plan's total time
 3. Focus on improving content quality, clarity, and student engagement
-4. Address all critique points comprehensively
-5. Output valid JSON only, no additional text
+4. Output valid JSON only, no additional text
 """
 )
 

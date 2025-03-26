@@ -13,7 +13,7 @@ sys.path.append(str(project_root))
 
 # Local application imports
 from backend.chains import get_llm, get_openrouter_llm
-from backend.chains import create_broad_plan_draft_chain, create_revise_plan_chain
+from backend.chains import create_broad_plan_draft_chain
 from backend.chains import create_artifact_chain
 
 # UI text constants
@@ -1105,6 +1105,9 @@ def display_revised_plan(plan_data):
             st.write(revised_plan)
             return
         
+        # Check if this is a critique-improved plan
+        is_critique_improved = "critique_text" in plan_data
+        
         # Display plan content
         with st.container():
             st.header(UI_TEXT["plan_title"] + " (Improved)")
@@ -1160,10 +1163,11 @@ def display_revised_plan(plan_data):
             st.markdown("---")
             add_download_button(broad_plan)
             
-            # Add plan enhancement button
-            if st.button("✏️ Revise Plan", type="primary", key="revise_improved_plan"):
-                st.session_state.show_revision_dialog = True
-                st.rerun()
+            # Only show Revise Plan button if this is NOT a critique-improved plan
+            if not is_critique_improved:
+                if st.button("✏️ Revise Plan", type="primary", key="revise_improved_plan"):
+                    st.session_state.show_revision_dialog = True
+                    st.rerun()
             
             # Display learning materials
             display_learning_materials(broad_plan)
@@ -1177,18 +1181,18 @@ def display_revised_plan(plan_data):
 
 def critique_and_improve():
     """
-    Critique and improve the current broad plan without using the revision dialog.
-    This function uses the critique and revise chains to enhance the plan quality.
+    Analyze the current lesson plan and display improvement suggestions for user selection.
+    Instead of automatically applying all improvements, this function lets users choose
+    which suggestions to apply.
     """
     if not st.session_state.broad_plan:
         st.error("Please generate a broad plan first")
         return
         
-    with st.spinner("Analyzing and improving your lesson plan..."):
+    with st.spinner("Analyzing your lesson plan..."):
         try:
-            # Initialize LLMs
+            # Initialize LLM
             llm1 = get_llm(model_name="gpt-4o-mini", temperature=0)
-            llm2 = get_openrouter_llm(model_name="anthropic/claude-3.7-sonnet", temperature=0)
             
             # Create critique chain
             from backend.prompts import CRITIQUE_TEMPLATE
@@ -1199,9 +1203,6 @@ def critique_and_improve():
                 prompt=CRITIQUE_TEMPLATE,
                 output_key="critique"
             )
-            
-            # Create revise chain
-            revise_chain = create_revise_plan_chain(llm2, llm2)
             
             # Extract broad plan information
             broad_plan = st.session_state.broad_plan
@@ -1251,80 +1252,122 @@ def critique_and_improve():
                     })
                     
                     # Process critique_result
-                    if isinstance(critique_result, str):
-                        if "```json" in critique_result:
-                            json_content = critique_result.split("```json")[1].split("```")[0].strip()
-                            critique_result = json.loads(json_content)
-                        else:
-                            try:
-                                critique_result = json.loads(critique_result)
-                            except json.JSONDecodeError:
-                                # If not valid JSON, keep as is
-                                pass
+                    critique_points = None
+                    if isinstance(critique_result['critique'], str):
+                        # Try to parse JSON
+                        try:
+                            if "```json" in critique_result['critique']:
+                                json_content = critique_result['critique'].split("```json")[1].split("```")[0].strip()
+                                critique_points = json.loads(json_content)
+                            else:
+                                critique_points = json.loads(critique_result['critique'])
+                        except json.JSONDecodeError:
+                            st.error("Could not parse critique result as JSON. Please try again.")
+                            return
+                    else:
+                        critique_points = critique_result['critique']
+                    
+                    # Save broad_plan_json_str to session state for later use
+                    st.session_state.critique_original_plan = broad_plan_json_str
+                    
+                    # Initialize CritiqueDialog and display
+                    from components.CritiqueDialog import CritiqueDialog
+                    critique_dialog = CritiqueDialog()
+                    
+                    # Define improvement callback function
+                    def improvement_callback(selected_points):
+                        apply_improvements(selected_points)
+                    
+                    # Show dialog
+                    critique_dialog.show(critique_points, improvement_callback)
+                    # Render dialog
+                    critique_dialog.render_dialog()
+                    
                 except Exception as e:
                     st.error(f"Error generating critique: {str(e)}")
-                    return
-            
-            # Convert critique_result to JSON string
-            critique_text_str = json.dumps(critique_result, ensure_ascii=False) if isinstance(critique_result, dict) else critique_result
-            
-            # Generate revised plan
-            with st.spinner("Improving plan based on analysis..."):
-                try:
-                    revised_result = revise_chain.invoke({
-                        "broad_plan_json": broad_plan_json_str,
-                        "critique_text": critique_text_str
-                    })
-                    
-                    # Process revised_result
-                    if isinstance(revised_result, str):
-                        try:
-                            if "```json" in revised_result:
-                                json_content = revised_result.split("```json")[1].split("```")[0].strip()
-                                revised_result = json.loads(json_content)
-                            else:
-                                revised_result = json.loads(revised_result)
-                        except json.JSONDecodeError as e:
-                            st.error(f"Error parsing revised_result: {str(e)}")
-                            return
-                    
-                    # Extract the actual revised plan content
-                    actual_revised_plan = None
-                    if isinstance(revised_result, dict):
-                        if "revised_plan" in revised_result:
-                            actual_revised_plan = revised_result["revised_plan"]
-                        elif "broad_plan" in revised_result:
-                            actual_revised_plan = revised_result["broad_plan"]
-                        elif "objectives" in revised_result and "outline" in revised_result:
-                            actual_revised_plan = revised_result
-                    
-                    if not actual_revised_plan:
-                        st.error("Could not extract revised plan from result")
-                        return
-                    
-                    # Create final result structure
-                    final_result = {
-                        "broad_plan_json": broad_plan_json_str,
-                        "critique_text": critique_text_str,
-                        "revised_plan": actual_revised_plan
-                    }
-                    
-                    # Update session state
-                    st.session_state.broad_plan = final_result
-                    
-                    # Display success message
-                    st.success("Your lesson plan has been improved based on professional critique!")
-                    
-                    # Use st.rerun() to reload page to display improved plan
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"Error improving plan: {str(e)}")
                     import traceback
                     st.error(f"Detailed error: {traceback.format_exc()}")
             
         except Exception as e:
             st.error(f"Error in critique and improve process: {str(e)}")
+            import traceback
+            st.error(f"Detailed error: {traceback.format_exc()}")
+
+def apply_improvements(selected_critique_points):
+    """
+    Apply improvements to the lesson plan based on user-selected critique points
+    
+    Args:
+        selected_critique_points: List of critique points selected by the user
+    """
+    if not hasattr(st.session_state, 'critique_original_plan'):
+        st.error("Original plan not found. Please try the critique process again.")
+        return
+        
+    broad_plan_json_str = st.session_state.critique_original_plan
+    
+    with st.spinner("Improving your lesson plan based on selected suggestions..."):
+        try:
+            # Initialize LLM
+            llm2 = get_openrouter_llm(model_name="anthropic/claude-3.7-sonnet", temperature=0)
+            
+            # Create revise selected chain
+            from backend.chains import create_revise_selected_plan_chain
+            revise_chain = create_revise_selected_plan_chain(llm2)
+            
+            # Convert selected critique points to JSON string
+            selected_critique_str = json.dumps(selected_critique_points, ensure_ascii=False)
+            
+            # Generate revised plan
+            revised_result = revise_chain.invoke({
+                "broad_plan_json": broad_plan_json_str,
+                "selected_critique_points": selected_critique_str
+            })
+            
+            # Process revised_result
+            if isinstance(revised_result, str):
+                try:
+                    if "```json" in revised_result:
+                        json_content = revised_result.split("```json")[1].split("```")[0].strip()
+                        revised_result = json.loads(json_content)
+                    else:
+                        revised_result = json.loads(revised_result)
+                except json.JSONDecodeError as e:
+                    st.error(f"Error parsing revised_result: {str(e)}")
+                    return
+            
+            # Extract the actual revised plan content
+            actual_revised_plan = None
+            if isinstance(revised_result, dict):
+                if "revised_plan" in revised_result:
+                    actual_revised_plan = revised_result["revised_plan"]
+                elif "broad_plan" in revised_result:
+                    actual_revised_plan = revised_result["broad_plan"]
+                elif "objectives" in revised_result and "outline" in revised_result:
+                    actual_revised_plan = revised_result
+            
+            if not actual_revised_plan:
+                st.error("Could not extract revised plan from result")
+                return
+            
+            # Create final result structure
+            final_result = {
+                "broad_plan_json": broad_plan_json_str,
+                "critique_text": selected_critique_str,
+                "revised_plan": actual_revised_plan
+            }
+            
+            # Update session state
+            st.session_state.broad_plan = final_result
+            
+            # Display success message
+            st.success("Your lesson plan has been improved based on the selected suggestions!")
+            
+            # Use st.rerun() to reload page to display improved plan
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"Error improving plan: {str(e)}")
             import traceback
             st.error(f"Detailed error: {traceback.format_exc()}")
 
