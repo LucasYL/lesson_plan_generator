@@ -1,0 +1,56 @@
+{
+  "title": "Teaching Styles",
+  "description": "Teaching styles refer to your approach and method to deliver knowledge and facilitate learning. It outlines the role you take on as a teacher, how you deliver content, and how you manage your classroom and relationship with your students. \n Our tool follows Grasha's (1994) model where there are 5 teaching styles; Expert, Formal Authority, Personal Model, Facilitator, and Delegator.",
+  "citation": "Citation: Grasha, A. F. (1994). A Matter of Style: The Teacher as Expert, Formal Authority, Personal Model, Facilitator, and Delegator. College Teaching, 42(4), 142-149. http://www.jstor.org/stable/27558675",
+  "pdf": "https://www.montana.edu/gradschool/documents/A-Matter-of-STyle-Grashab.pdf",
+  "links": [
+    "https://tophat.com/blog/teaching-styles/",
+    "https://www.group.app/blog/teaching-styles-you-need-to-know/"
+  ],
+  "styles": [
+    {
+      "name": "Expert",
+      "description": [
+        "A teacher-centered approach where teachers hold the knowledge and expertise that students need.",
+        "Focuses on sharing knowledge, demonstrating knowledge, and providing feedback to promote learning."
+      ]
+    },
+    {
+      "name": "Formal Authority",
+      "description": [
+        "A teacher-centered approach that focuses on lecturing and the traditional teaching style.",
+        "Goals and expectations are clearly defined and communicated.",
+        "Offers a well-structured learning environment.",
+        "Ideal for delivering large amounts of information in a timely manner.",
+        "More suited for higher-education settings and larger classrooms.",
+        "May not be suitable for all students and limits student engagement."
+      ]
+    },
+    {
+      "name": "Personal Model",
+      "description": [
+        "A teacher-centered approach that focuses on teaching with real-life and personal examples, with students observing and following directions.",
+        "The teacher takes a coach or mentor role, making it a popular approach for subjects such as physical education or art.",
+        "Highly hands-on method with direct observation and teachers guiding students.",
+        "A key concern with this approach is the example being seen as an ideal which may result in students feeling incapable of meeting the standard."
+      ]
+    },
+    {
+      "name": "Facilitator",
+      "description": [
+        "A student-centered approach that focuses on facilitating critical thinking and guiding students to be independent learners through activities.",
+        "Emphasizes teacher-student interactions for teachers to guide and direct students towards discovery, with students encouraged to ask questions and explore options.",
+        "Requires more one-on-one interaction, making it harder to implement in larger classrooms."
+      ]
+    },
+    {
+      "name": "Delegator",
+      "description": [
+        "A student-centered approach where teachers take on more of an observer role with students working independently or in groups.",
+        "Promotes collaboration between students and peer learning.",
+        "Popular for practical lessons, such as science labs, or those ideal for peer feedback, such as creative writing.",
+        "May not be suitable for all students, subjects, or grade levels, and requires careful management to ensure active participation from all students."
+      ]
+    }
+  ]
+}

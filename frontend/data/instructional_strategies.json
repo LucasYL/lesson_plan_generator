@@ -1,0 +1,48 @@
+{
+  "title": "Instructional Strategies",
+  "description": "Instructional strategies refer to the materials and methods used to support learning. Their effectiveness often depends on the type of student and the nature of the lesson. Some students respond better to specific strategies, while certain strategies may be more effective for particular subjects or topics.",
+  "link": "https://tlconestoga.ca/instructional-strategies/",
+  "types": [
+    {
+      "name": "Active Learning",
+      "description": "Moves away from students passively absorbing information and provides them with opportunities to actively participate in the learning process through reflection and practical experiences.",
+      "examples": [
+        "Think-Pair-Share",
+        "Muddiest Point",
+        "Peer Instruction"
+      ],
+      "more_examples_link": "https://www.skillshub.com/blog/active-learning-strategies-examples/"
+    },
+    {
+      "name": "Formative Assessment",
+      "description": "Focuses on monitoring student learning throughout the course to identify any gaps and address them in a timely manner.",
+      "examples": [
+        "Exit tickets",
+        "Concept map",
+        "Self-assessment",
+        "Low-stake quizzes or polls (e.g., Kahoot, Socrative)"
+      ],
+      "more_examples_link": "https://tophat.com/blog/formative-assessment-examples/"
+    },
+    {
+      "name": "Differentiated Instruction",
+      "description": "Aims to address students' varying needs and learning abilities by differentiating what students are going to learn, the types of activities, and the ways and environments in which students demonstrate their learning.",
+      "examples": [
+        "Learning Stations",
+        "Open-ended projects",
+        "Interviewing students",
+        "Tiered activities"
+      ],
+      "more_examples_link": "https://www.prodigygame.com/main-en/blog/differentiated-instruction-strategies-examples-download/"
+    },
+    {
+      "name": "Direct Instruction",
+      "description": "A teacher-centered approach that delivers clear and structured lessons. Teachers lead the lesson and provide immediate feedback to students.",
+      "examples": [
+        "Lectures",
+        "Demonstrations",
+        "Didactic Questioning"
+      ]
+    }
+  ]
+}
