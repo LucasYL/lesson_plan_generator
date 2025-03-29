@@ -1346,7 +1346,7 @@ def display_revised_plan(plan_data):
             add_download_button(broad_plan)
             
             # Add enhancement buttons
-            col1, col2 = st.columns([1, 1])
+            col1, col2, col3 = st.columns([1, 1, 2])
             with col1:
                 # Always show Revise Plan button regardless of critique status
                 if st.button("✏️ Revise Plan", type="primary", key="revise_improved_plan"):
