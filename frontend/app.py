@@ -996,7 +996,7 @@ def revision_dialog():
                         revised_plan = json_content
                     else:
                         # Initialize LLM for precise revision
-                        llm = get_openrouter_llm(model_name="anthropic/claude-3.5-sonnet", temperature=0)
+                        llm = get_openrouter_llm(model_name="anthropic/claude-3.7-sonnet", temperature=0)
                         
                         # Import the precise revision chain
                         from backend.chains import create_precise_revision_chain
