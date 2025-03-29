@@ -323,7 +323,7 @@ def generate_lesson_plan(grade_level, topic, duration, styles, objectives, requi
         try:
             # Initialize LLM and chains
             llm = get_llm(model_name="gpt-4o", temperature=0)
-            llm2 = get_openrouter_llm(model_name="anthropic/claude-3.5-sonnet", temperature=0)
+            llm2 = get_openrouter_llm(model_name="anthropic/claude-3.7-sonnet", temperature=0)
             broad_chain = create_broad_plan_draft_chain(llm)
             
             # Prepare reference document content
@@ -750,20 +750,83 @@ def revision_dialog():
     
     # Initialize revision data if empty
     if not st.session_state.revision_data['phases']:
-        # Handle broad_plan data structure
+        # Handle different broad_plan data structures
         broad_plan = st.session_state.broad_plan
-        if isinstance(broad_plan, str):
-            broad_plan = json.loads(broad_plan)
-        if "broad_plan_draft" in broad_plan:
-            if isinstance(broad_plan["broad_plan_draft"], str):
-                if "```json" in broad_plan["broad_plan_draft"]:
-                    json_content = broad_plan["broad_plan_draft"].split("```json")[1].split("```")[0].strip()
-                    broad_plan = json.loads(json_content)
-                else:
-                    broad_plan = json.loads(broad_plan["broad_plan_draft"])
         
-        # Get phases data
-        outline = broad_plan.get("broad_plan", {}).get("outline", [])
+        # Check if we have a stored plan from the improved version
+        if hasattr(st.session_state, 'revision_plan_data'):
+            extracted_plan = st.session_state.revision_plan_data
+        else:
+            # Extract plan from various possible formats
+            extracted_plan = None
+            
+            # Handle string format
+            if isinstance(broad_plan, str):
+                try:
+                    broad_plan = json.loads(broad_plan)
+                except json.JSONDecodeError:
+                    st.error("Could not parse plan data from string format")
+                    return
+            
+            # Handle draft format
+            if "broad_plan_draft" in broad_plan:
+                draft = broad_plan["broad_plan_draft"]
+                if isinstance(draft, str):
+                    try:
+                        if "```json" in draft:
+                            json_content = draft.split("```json")[1].split("```")[0].strip()
+                            extracted_plan = json.loads(json_content)
+                        else:
+                            extracted_plan = json.loads(draft)
+                        
+                        if "broad_plan" in extracted_plan:
+                            extracted_plan = extracted_plan["broad_plan"]
+                    except json.JSONDecodeError:
+                        st.error("Could not parse plan data from draft format")
+                        return
+                else:
+                    # Draft is already parsed JSON
+                    if "broad_plan" in draft:
+                        extracted_plan = draft["broad_plan"]
+                    else:
+                        extracted_plan = draft
+            
+            # Handle critique & improve result format
+            elif "revised_plan" in broad_plan:
+                revised_plan = broad_plan["revised_plan"]
+                
+                if isinstance(revised_plan, str):
+                    try:
+                        if "```json" in revised_plan:
+                            json_content = revised_plan.split("```json")[1].split("```")[0].strip()
+                            revised_plan = json.loads(json_content)
+                        else:
+                            revised_plan = json.loads(revised_plan)
+                    except json.JSONDecodeError:
+                        st.error("Could not parse revised plan data")
+                        return
+                
+                if "broad_plan" in revised_plan:
+                    extracted_plan = revised_plan["broad_plan"]
+                else:
+                    extracted_plan = revised_plan
+            
+            # Handle direct plan format
+            elif "broad_plan" in broad_plan:
+                extracted_plan = broad_plan["broad_plan"]
+            
+            # Handle plan when it already has the right structure
+            elif "objectives" in broad_plan and "outline" in broad_plan:
+                extracted_plan = broad_plan
+        
+        # If we still don't have a valid plan
+        if not extracted_plan or not isinstance(extracted_plan, dict) or "outline" not in extracted_plan:
+            st.error("Could not extract a valid lesson plan structure")
+            st.write("Current plan data:")
+            st.write(broad_plan)
+            return
+        
+        # Set up the revision phases
         st.session_state.revision_data['phases'] = [
             {
                 'phase': phase['phase'],
@@ -771,28 +834,75 @@ def revision_dialog():
                 'purpose': phase.get('purpose', ''),
                 'description': phase.get('description', '')
             }
-            for phase in outline
+            for phase in extracted_plan.get("outline", [])
         ]
+        
+        # Store the original plan for reference
+        st.session_state.phase_edits['original_plan'] = {
+            'broad_plan': extracted_plan
+        }
+        
+        # Store the original plan for precise revision
+        st.session_state.original_plan_for_revision = extracted_plan
     
     # Display phases for editing
     st.markdown("### 📊 Teaching Phases")
     phases = st.session_state.revision_data['phases']
+    phase_changes = []  # Track which phases have been modified
+    
+    st.info("📌 Click on any phase name or duration to modify it. Then provide any additional content changes in the feedback box below. The system will intelligently update the lesson plan based on your input.")
+    
     for i, phase in enumerate(phases):
         with st.container():
             st.markdown(f"#### 📝 Phase {i+1}")
             col1, col2 = st.columns([2, 1])
+            
+            # Get original phase data for comparison
+            original_phase = {
+                'phase': phase['phase'],
+                'duration': phase['duration']
+            }
+            
             with col1:
-                phase['phase'] = st.text_input(
+                new_phase_name = st.text_input(
                     "Phase Name",
                     value=phase['phase'],
                     key=f"phase_name_{i}"
                 )
+                if new_phase_name != phase['phase']:
+                    phase['phase'] = new_phase_name
+                    # Mark this phase as changed
+                    phase_changes.append({
+                        'index': i,
+                        'original': original_phase,
+                        'new': {
+                            'phase': new_phase_name,
+                            'duration': phase['duration']
+                        }
+                    })
+            
             with col2:
-                phase['duration'] = st.text_input(
+                new_duration = st.text_input(
                     "Duration",
                     value=phase['duration'],
                     key=f"phase_duration_{i}"
                 )
+                if new_duration != phase['duration']:
+                    phase['duration'] = new_duration
+                    # Update or add to phase changes
+                    existing_change = next((c for c in phase_changes if c['index'] == i), None)
+                    if existing_change:
+                        existing_change['new']['duration'] = new_duration
+                    else:
+                        phase_changes.append({
+                            'index': i,
+                            'original': original_phase,
+                            'new': {
+                                'phase': phase['phase'],
+                                'duration': new_duration
+                            }
+                        })
+            
             # Display purpose and description (read-only)
             if phase.get('purpose'):
                 st.markdown("**🎯 Purpose:**")
@@ -804,57 +914,173 @@ def revision_dialog():
     
     # Add feedback section
     st.markdown("### 💬 Feedback")
+    st.info("📝 Provide specific revision suggestions below. For example:\n"
+           "- Add more group discussion activities to Phase 4\n"
+           "- Include practical exercises in Phase 2\n"
+           "- Update Phase 3 purpose to emphasize critical thinking\n\n"
+           "The system will automatically understand your feedback and apply it to the specified phases. No need to use complex formats - simply be clear about which phase you want to modify and how.")
+    
     feedback = st.text_area(
-        "Provide feedback to improve the plan",
+        "Provide specific improvement suggestions",
         value=st.session_state.revision_data['feedback'],
         height=150,
-        placeholder="Enter your suggestions for improvement..."
+        placeholder="Enter specific suggestions describing which phases you want to change and how..."
     )
     st.session_state.revision_data['feedback'] = feedback
     
     # Add buttons
     col1, col2, col3 = st.columns([1, 1, 4])
     with col1:
-        if st.button("💾 Save & Revise", type="primary"):
-            # Prepare revision input
-            combined_feedback = {
-                "user_feedback": feedback,
-                "current_phases": [
-                    {
-                        'phase': phase['phase'],
-                        'duration': phase['duration']
-                    }
-                    for phase in st.session_state.revision_data['phases']
-                ],
-                "has_phase_changes": True
-            }
+        if st.button("💾 Save & Apply", type="primary"):
+            # Check if there are actual changes
+            if not phase_changes and not feedback.strip():
+                st.warning("No changes detected. Please modify phase names, durations, or provide feedback.")
+                return
             
-            # Get reference text from session state
-            reference_text = st.session_state.form_data.get("reference_text", "")
+            # Format the revised phases data
+            revised_phases_str = ""
+            if phase_changes:
+                for change in phase_changes:
+                    i = change['index']
+                    original = change['original']
+                    new = change['new']
+                    revised_phases_str += f"- Phase {i+1}: Change '{original['phase']}' ({original['duration']}) to '{new['phase']}' ({new['duration']})\n"
+            else:
+                revised_phases_str = "No phase name or duration changes requested."
             
-            # Generate revised plan
-            with st.spinner("Revising plan..."):
-                revised_broad_result = st.session_state.broad_chain.invoke({
-                    "grade_level": st.session_state.form_data["grade_level"],
-                    "topic": st.session_state.form_data["topic"],
-                    "duration": st.session_state.form_data["duration"],
-                    "style": json.dumps(st.session_state.form_data["style"]) if isinstance(st.session_state.form_data["style"], list) else json.dumps([st.session_state.form_data["style"]]),
-                    "learning_objectives": json.dumps(st.session_state.form_data["objectives"], ensure_ascii=False),
-                    "requirements": json.dumps(st.session_state.form_data["requirements"], ensure_ascii=False),
-                    "broad_plan_feedback": json.dumps(combined_feedback, ensure_ascii=False),
-                    "reference_context": reference_text
-                })
-                
-                # Update plan and close dialog
-                st.session_state.broad_plan = revised_broad_result
-                st.session_state.show_revision_dialog = False
-                st.session_state.revision_data = {'phases': [], 'feedback': ""}
-                st.rerun()
+            # Get the original plan JSON
+            original_plan_json = json.dumps(
+                {"broad_plan": st.session_state.original_plan_for_revision}, 
+                ensure_ascii=False
+            )
+            
+            # Use precise revision chain
+            with st.spinner("Making precise revisions..."):
+                try:
+                    # Check if feedback contains complete JSON
+                    contains_json = False
+                    json_content = None
+                    
+                    # Try to extract JSON from feedback if it exists
+                    if feedback.strip():
+                        # Look for JSON pattern in feedback
+                        json_start_idx = feedback.find('{')
+                        json_end_idx = feedback.rfind('}')
+                        
+                        if json_start_idx != -1 and json_end_idx != -1 and json_end_idx > json_start_idx:
+                            potential_json = feedback[json_start_idx:json_end_idx+1]
+                            try:
+                                json_content = json.loads(potential_json)
+                                
+                                # Validate that JSON has the expected structure
+                                is_valid_structure = False
+                                if isinstance(json_content, dict):
+                                    # Check if the structure contains broad_plan
+                                    if "broad_plan" in json_content:
+                                        broad_plan = json_content["broad_plan"]
+                                        if isinstance(broad_plan, dict) and "objectives" in broad_plan and "outline" in broad_plan:
+                                            is_valid_structure = True
+                                
+                                if is_valid_structure:
+                                    contains_json = True
+                                    st.info("Detected complete lesson plan JSON in your feedback. Using it directly.")
+                                else:
+                                    st.warning("Detected JSON in your feedback, but it doesn't have the required structure. JSON must contain a 'broad_plan' key with 'objectives' and 'outline'. Proceeding with AI-assisted revision.")
+                                    json_content = None
+                            except json.JSONDecodeError:
+                                # Not a valid JSON, continue with normal processing
+                                pass
+                    
+                    if contains_json and json_content:
+                        # Use the JSON directly from user input
+                        revised_plan = json_content
+                    else:
+                        # Initialize LLM for precise revision
+                        llm = get_openrouter_llm(model_name="anthropic/claude-3.5-sonnet", temperature=0)
+                        
+                        # Import the precise revision chain
+                        from backend.chains import create_precise_revision_chain
+                        precise_chain = create_precise_revision_chain(llm)
+                        
+                        # Enhanced feedback validation
+                        enhanced_feedback = feedback
+                        
+                        # Generate precisely revised plan
+                        revised_result = precise_chain.invoke({
+                            "original_plan_json": original_plan_json,
+                            "revised_phases": revised_phases_str,
+                            "user_feedback": enhanced_feedback if enhanced_feedback.strip() else "No additional feedback provided."
+                        })
+                        
+                        # Process the result
+                        if isinstance(revised_result, dict) and "precisely_revised_plan" in revised_result:
+                            revised_plan = revised_result["precisely_revised_plan"]
+                            
+                            # Parse if it's a string
+                            if isinstance(revised_plan, str):
+                                try:
+                                    # Look for JSON pattern in the response
+                                    json_start_idx = revised_plan.find('{')
+                                    json_end_idx = revised_plan.rfind('}')
+                                    
+                                    if json_start_idx != -1 and json_end_idx != -1 and json_end_idx > json_start_idx:
+                                        json_content = revised_plan[json_start_idx:json_end_idx+1]
+                                        revised_plan = json.loads(json_content)
+                                    elif "```json" in revised_plan:
+                                        json_content = revised_plan.split("```json")[1].split("```")[0].strip()
+                                        revised_plan = json.loads(json_content)
+                                    else:
+                                        revised_plan = json.loads(revised_plan)
+                                except json.JSONDecodeError as e:
+                                    st.error(f"Error parsing revised plan: {str(e)}")
+                                    st.error("Please provide more specific suggestions about which phases you want to modify.")
+                                    st.code(revised_plan, language="json")
+                                    return
+                        else:
+                            st.error("Couldn't get a valid revised plan. Please provide more specific feedback.")
+                            return
+                    
+                    # Final validation before updating
+                    if not isinstance(revised_plan, dict):
+                        st.error("Invalid revision format. Expected a JSON object.")
+                        return
+                        
+                    # Check if we have a valid structure before proceeding
+                    is_valid_structure = False
+                    if "broad_plan" in revised_plan:
+                        broad_plan = revised_plan["broad_plan"]
+                        if isinstance(broad_plan, dict) and "objectives" in broad_plan and "outline" in broad_plan:
+                            is_valid_structure = True
+                    
+                    if not is_valid_structure:
+                        st.error("Invalid lesson plan structure. The plan must contain a 'broad_plan' key with 'objectives' and 'outline'.")
+                        st.write("Received structure:")
+                        st.write(revised_plan)
+                        return
+                        
+                    # Update session state
+                    st.session_state.broad_plan = {"broad_plan_draft": json.dumps(revised_plan, ensure_ascii=False)}
+                    st.session_state.show_revision_dialog = False
+                    st.session_state.revision_data = {'phases': [], 'feedback': ""}
+                    if hasattr(st.session_state, 'revision_plan_data'):
+                        delattr(st.session_state, 'revision_plan_data')
+                    if hasattr(st.session_state, 'original_plan_for_revision'):
+                        delattr(st.session_state, 'original_plan_for_revision')
+                    st.success("Plan has been precisely revised!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error during revision: {str(e)}")
+                    import traceback
+                    st.error(f"Detailed error: {traceback.format_exc()}")
     
     with col2:
         if st.button("❌ Cancel"):
             st.session_state.show_revision_dialog = False
             st.session_state.revision_data = {'phases': [], 'feedback': ""}
+            if hasattr(st.session_state, 'revision_plan_data'):
+                delattr(st.session_state, 'revision_plan_data')
+            if hasattr(st.session_state, 'original_plan_for_revision'):
+                delattr(st.session_state, 'original_plan_for_revision')
             st.rerun()
 
 def handle_artifact_generation(artifact_result, broad_plan):
@@ -873,7 +1099,8 @@ def handle_artifact_generation(artifact_result, broad_plan):
     try:
         # Create artifact chain
         llm = get_llm(model_name="gpt-4o", temperature=0)
-        chain = create_artifact_chain(llm, artifact_result["type"])
+        llm2 = get_openrouter_llm(model_name="anthropic/claude-3.7-sonnet", temperature=0)
+        chain = create_artifact_chain(llm2, artifact_result["type"])
         
         # Generate content
         with st.spinner(f"Generating {artifact_result['type']}..."):
@@ -1063,9 +1290,6 @@ def display_revised_plan(plan_data):
             st.write(revised_plan)
             return
         
-        # Check if this is a critique-improved plan
-        is_critique_improved = "critique_text" in plan_data
-        
         # Display plan content
         with st.container():
             st.header(UI_TEXT["plan_title"] + " (Improved)")
@@ -1121,11 +1345,25 @@ def display_revised_plan(plan_data):
             st.markdown("---")
             add_download_button(broad_plan)
             
-            # Only show Revise Plan button if this is NOT a critique-improved plan
-            if not is_critique_improved:
+            # Add enhancement buttons
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                # Always show Revise Plan button regardless of critique status
                 if st.button("✏️ Revise Plan", type="primary", key="revise_improved_plan"):
+                    # Store the current plan in session state for the revision dialog
+                    st.session_state.revision_plan_data = broad_plan
                     st.session_state.show_revision_dialog = True
                     st.rerun()
+            
+            with col2:
+                # Add critique & improve button to enable multiple rounds of critique
+                if st.button("🔍 Critique & Improve", type="secondary", key="critique_again"):
+                    # Store the current improved plan in a temporary variable
+                    temp_plan = {"broad_plan": broad_plan}
+                    # Update session state
+                    st.session_state.broad_plan = temp_plan
+                    # Call critique_and_improve
+                    critique_and_improve()
             
             # Display learning materials
             display_learning_materials(broad_plan)
@@ -1162,10 +1400,13 @@ def critique_and_improve():
                 output_key="critique"
             )
             
-            # Extract broad plan information
+            # Extract broad plan information based on the current structure
             broad_plan = st.session_state.broad_plan
             
-            # Parse broad_plan
+            # Extract the actual plan for critique
+            extracted_plan = None
+            
+            # Parse broad_plan if it's a string
             if isinstance(broad_plan, str):
                 try:
                     broad_plan = json.loads(broad_plan)
@@ -1173,7 +1414,9 @@ def critique_and_improve():
                     st.error(f"Error parsing broad_plan string: {str(e)}")
                     return
             
-            # Parse broad_plan_draft
+            # Handle different plan structures
+            
+            # 1. Handle the case when broad_plan contains broad_plan_draft
             if "broad_plan_draft" in broad_plan:
                 draft = broad_plan.get("broad_plan_draft")
                 
@@ -1181,26 +1424,70 @@ def critique_and_improve():
                     try:
                         if "```json" in draft:
                             json_content = draft.split("```json")[1].split("```")[0].strip()
-                            broad_plan = json.loads(json_content)
+                            draft_json = json.loads(json_content)
                         else:
-                            broad_plan = json.loads(draft)
+                            draft_json = json.loads(draft)
+                            
+                        if "broad_plan" in draft_json:
+                            extracted_plan = {"broad_plan": draft_json["broad_plan"]}
+                        else:
+                            extracted_plan = {"broad_plan": draft_json}
                     except json.JSONDecodeError as e:
                         st.error(f"Error parsing broad_plan_draft string: {str(e)}")
                         return
+                else:
+                    # Already a dict
+                    if "broad_plan" in draft:
+                        extracted_plan = {"broad_plan": draft["broad_plan"]}
+                    else:
+                        extracted_plan = {"broad_plan": draft}
             
-            # Ensure broad_plan contains broad_plan key
-            original_plan = None
-            if "broad_plan" in broad_plan:
-                original_plan = broad_plan["broad_plan"]
+            # 2. Handle the case when broad_plan has a critique result
+            elif "revised_plan" in broad_plan:
+                revised_plan = broad_plan.get("revised_plan")
+                
+                if isinstance(revised_plan, str):
+                    try:
+                        if "```json" in revised_plan:
+                            json_content = revised_plan.split("```json")[1].split("```")[0].strip()
+                            revised_json = json.loads(json_content)
+                        else:
+                            revised_json = json.loads(revised_plan)
+                            
+                        if "broad_plan" in revised_json:
+                            extracted_plan = {"broad_plan": revised_json["broad_plan"]}
+                        elif "objectives" in revised_json and "outline" in revised_json:
+                            extracted_plan = {"broad_plan": revised_json}
+                        else:
+                            extracted_plan = {"broad_plan": revised_json}
+                    except json.JSONDecodeError as e:
+                        st.error(f"Error parsing revised_plan string: {str(e)}")
+                        return
+                elif isinstance(revised_plan, dict):
+                    if "broad_plan" in revised_plan:
+                        extracted_plan = {"broad_plan": revised_plan["broad_plan"]}
+                    elif "objectives" in revised_plan and "outline" in revised_plan:
+                        extracted_plan = {"broad_plan": revised_plan}
+                    else:
+                        extracted_plan = {"broad_plan": revised_plan}
+            
+            # 3. Handle the case when broad_plan has a direct broad_plan structure
+            elif "broad_plan" in broad_plan:
+                extracted_plan = {"broad_plan": broad_plan["broad_plan"]}
+            
+            # 4. Handle the case when broad_plan itself is the plan
             elif "objectives" in broad_plan and "outline" in broad_plan:
-                original_plan = broad_plan
-                broad_plan = {"broad_plan": original_plan}
-            else:
+                extracted_plan = {"broad_plan": broad_plan}
+                
+            # If we couldn't extract a valid plan
+            if not extracted_plan:
                 st.error("Could not find valid lesson plan structure")
+                st.write("Current plan data:")
+                st.write(broad_plan)
                 return
             
-            # Convert broad_plan to JSON string
-            broad_plan_json_str = json.dumps(broad_plan, ensure_ascii=False)
+            # Convert extracted_plan to JSON string
+            broad_plan_json_str = json.dumps(extracted_plan, ensure_ascii=False)
             
             # Generate critique
             with st.spinner("Analyzing plan quality..."):

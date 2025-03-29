@@ -15,6 +15,7 @@ from backend.prompts import (
     BROAD_PLAN_DRAFT_TEMPLATE,
     CRITIQUE_TEMPLATE,
     REVISE_SELECTED_TEMPLATE,
+    PRECISE_REVISION_TEMPLATE,
     QUIZ_GENERATION_TEMPLATE,
     CODE_PRACTICE_GENERATION_TEMPLATE,
     SLIDES_GENERATION_TEMPLATE
@@ -26,6 +27,7 @@ __all__ = [
     'get_openrouter_llm',
     'create_broad_plan_draft_chain',
     'create_revise_selected_plan_chain',
+    'create_precise_revision_chain',
     'create_artifact_chain'
 ]
 
@@ -74,6 +76,24 @@ def create_revise_selected_plan_chain(llm):
     )
     
     return revise_selected_chain
+
+def create_precise_revision_chain(llm):
+    """
+    Create a chain for making precise, targeted revisions to a lesson plan.
+    This chain ensures that only the specific changes requested by the user are applied,
+    preserving all other content exactly as it was.
+    
+    Args:
+        llm: Language model for revision
+        
+    Returns:
+        LLMChain: The chain for precise revision
+    """
+    return LLMChain(
+        llm=llm,
+        prompt=PRECISE_REVISION_TEMPLATE,
+        output_key="precisely_revised_plan"
+    )
 
 def create_artifact_chain(llm, artifact_type: str):
     """Create a chain for generating specific type of artifact

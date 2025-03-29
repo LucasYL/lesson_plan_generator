@@ -24,11 +24,23 @@ INPUTS:
    - Grade Level: {grade_level}
 
 2. Teaching Approach:
-   - Style: {style}
-     * This defines the primary teaching method (e.g., lecture-based means primarily instructor-led,
-       interactive means balanced between instruction and student participation,
-       practice-oriented means hands-on activities dominate)
-     * The lesson phases should strongly reflect this chosen style
+   - Selected Teaching Style(s): {style}
+   
+   * Understanding Teaching Styles:
+     - Expert: A teacher-centered approach where teachers hold knowledge and expertise, focusing on sharing knowledge and providing direct feedback. Strong in content delivery and demonstrations.
+     - Formal Authority: A teacher-centered approach focused on lecturing in a structured environment, ideal for delivering large amounts of information efficiently. Strong in clarity of goals and expectations.
+     - Personal Model: A teacher-centered approach using real-life examples with direct observation, where teacher acts as a coach/mentor. Strong in demonstrations and modeling behavior.
+     - Facilitator: A student-centered approach focused on guiding critical thinking through activities, emphasizing teacher-student interactions. Strong in fostering independent learning and discovery.
+     - Delegator: A student-centered approach where teacher serves as an observer while students work independently or in groups. Strong in promoting collaboration and peer learning.
+   
+   * Blended Style Approach:
+     - When multiple styles are selected, they should be integrated to create a balanced approach
+     - Teacher-centered styles (Expert, Formal Authority, Personal Model) should be balanced with student-centered approaches (Facilitator, Delegator)
+     - The beginning phases often utilize more structured approaches (Expert/Formal Authority)
+     - The middle phases should transition to more interactive approaches (Personal Model/Facilitator)
+     - The final phases can incorporate more independent work (Facilitator/Delegator)
+     - Each phase should clearly reflect elements of the selected teaching styles
+     - Time allocation should be balanced appropriately between teacher-led and student-centered activities based on the combination of selected styles
 
 3. Learning Goals:
    - Objectives: {learning_objectives}
@@ -84,13 +96,32 @@ TASK:
       - Ensure progression toward objectives
       - Incorporate all requirements
       - Follow pedagogical sequence
+      - CRITICALLY IMPORTANT: Ensure each phase reflects the selected teaching style(s)
+      - If multiple styles are selected, create a balanced progression:
+        * Opening phases might be more structured/teacher-led
+        * Middle phases should include more guided interaction
+        * Later phases can involve more student independence and application
+        * The overall balance should reflect the combination of selected styles
 
-4) Quality Check:
+4) Teaching Style Integration in Phases:
+   - For each phase, explicitly consider how the selected teaching style(s) influence:
+     * The teacher's role in the phase
+     * The level of student participation
+     * The types of activities and interactions
+     * The delivery methods for content
+     * The assessment approaches
+   - When blending styles, maintain coherence by:
+     * Creating clear transitions between different teaching approaches
+     * Ensuring the overall flow feels natural, not disjointed
+     * Maintaining alignment with the learning objectives throughout
+
+5) Quality Check:
    - Verify all feedback has been addressed
    - Ensure phase modifications are applied exactly
    - Check alignment with objectives
    - Validate reference material usage
    - Confirm total duration matches {duration}
+   - Verify that teaching phases accurately reflect the selected teaching style(s)
 
 OUTPUT FORMAT (JSON):
 {{
@@ -121,7 +152,13 @@ CONSTRAINTS:
    * Maintain exact phase names and durations when provided
    * Only modify structure if explicitly requested
 
-3. Technical Requirements:
+3. Teaching Style Integration:
+   * Each phase must clearly reflect the selected teaching style(s)
+   * If multiple styles are selected, create a thoughtful blend that leverages the strengths of each
+   * Ensure the overall lesson structure creates a coherent learning experience
+   * Maintain appropriate balance between teacher-led and student-centered activities
+
+4. Technical Requirements:
    * Output only valid JSON
    * Include all required fields
    * Ensure total duration matches {duration} minutes
@@ -155,7 +192,7 @@ You are an expert educational consultant reviewing a detailed lesson plan.
    - Learning assessment methods
 
 ### **OUTPUT FORMAT**
-Your output must be a valid JSON array containing 3-5 critique points, each with the following structure:
+Your output must be a valid JSON array containing 1-7 critique points, each with the following structure:
 ```json
 [
   {{
@@ -176,9 +213,11 @@ Your output must be a valid JSON array containing 3-5 critique points, each with
 2. Focus on meaningful improvements that enhance the educational value
 3. Provide a balanced analysis covering different aspects of the lesson plan
 4. Ensure suggestions are realistic and implementable
-5. NUMBER your critique points from 1 to however many you provide (3-5)
-6. STRICTLY follow the JSON format specified above
-7. Do NOT include any explanatory text outside the JSON structure
+5. NUMBER your critique points from 1 to however many you provide (1-7)
+6. If this is likely a follow-up critique after previous improvements, focus on remaining issues
+7. If the plan is already high quality, it's acceptable to provide fewer critique points (as few as 1-2)
+8. STRICTLY follow the JSON format specified above
+9. Do NOT include any explanatory text outside the JSON structure
 """
 )
 
@@ -225,6 +264,86 @@ Apply ONLY the selected critique points while following these rules:
 2. Ensure the total duration still matches the original plan's total time
 3. Focus on improving content quality, clarity, and student engagement
 4. Output valid JSON only, no additional text
+"""
+)
+
+# New template for precisely revising a lesson plan
+PRECISE_REVISION_TEMPLATE = PromptTemplate(
+    input_variables=["original_plan_json", "revised_phases", "user_feedback"],
+    template="""
+You are an expert instructional designer tasked with making precise, targeted revisions to a lesson plan.
+
+### **ORIGINAL LESSON PLAN**
+{original_plan_json}
+
+### **USER REVISION REQUESTS**
+The user has requested the following changes:
+
+1. Phase name and duration changes:
+{revised_phases}
+
+2. Additional feedback:
+{user_feedback}
+
+### **INSTRUCTIONS FOR PRECISE REVISION**
+1. Make specific changes requested by the user
+2. If the user's feedback is vague (e.g., "Make Phase 4 better" or "Change Phase 2"):
+   - Identify which phase(s) the user wants to modify
+   - Make intelligent improvements to those phases based on teaching best practices
+   - If a phase name is changed, update its purpose and description to match the new name
+   - Ensure the content remains aligned with the overall learning objectives
+
+3. If a phase is specifically mentioned in the feedback:
+   - Update that phase's description and purpose to reflect requested changes
+   - Make the description more detailed, clear, and actionable
+   - Ensure the purpose aligns with the learning objectives
+   - Update the teaching approach and activities to match the requested changes
+
+4. For any changes to a phase's name or duration:
+   - ALWAYS update the corresponding description and purpose to match the new name
+   - Ensure the activities and teaching methods described are appropriate for the new duration
+   - Maintain pedagogical consistency with the new phase name
+
+5. Do NOT modify phases that weren't mentioned in the user feedback
+6. Do NOT alter the learning objectives unless explicitly requested by the user
+
+### **HANDLING USER FEEDBACK**
+For all types of user feedback:
+1. Analyze carefully to understand which phases the user wants to modify
+2. For clearly specified changes, apply them exactly as requested
+3. For vague feedback, make intelligent improvements to mentioned phases
+4. If a phase name is changed, its description MUST be updated accordingly
+5. Ensure all changes enhance the educational value of the lesson
+6. If feedback contains complete JSON, use it as the basis for revision
+
+### **OUTPUT FORMAT (JSON)**
+You must return a valid JSON object with the same structure as the original plan:
+{{
+  "broad_plan": {{
+    "objectives": [
+      "Original objectives (unchanged unless explicitly requested to modify)"
+    ],
+    "outline": [
+      {{
+        "phase": "Phase name (modified if specified in request)",
+        "duration": "Duration (modified if specified in request)",
+        "purpose": "Purpose statement (updated for any modified phase)",
+        "description": "Description (updated for any modified phase to match new phase name and content)"
+      }},
+      // Additional phases...
+    ]
+  }}
+}}
+
+### **CRITICAL REQUIREMENTS**
+1. Your output MUST be valid JSON
+2. When a phase name is changed, its description and purpose MUST be updated to match
+3. Only modify phases that were mentioned in the user feedback
+4. Ensure the total duration matches the original plan's total time
+5. Make all changes educationally sound and beneficial to the learning experience
+6. When updating a phase's content, ensure it remains aligned with the learning objectives
+7. ALWAYS return JUST the JSON content, nothing else (no preamble, no explanation)
+8. Handle all types of user feedback gracefully - from specific changes to vague requests
 """
 )
 
