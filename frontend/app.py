@@ -1,15 +1,25 @@
 # Standard library imports
-from components.InfoSidebar import display_tips, display_teaching_styles_info
-from backend.chains import create_artifact_chain
-from backend.chains import create_broad_plan_draft_chain
-from backend.chains import get_llm, get_openrouter_llm
 import sys
 import os
 import json
 from pathlib import Path
 
+import time
+
 # Third-party imports
 import streamlit as st
+
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
+
+# Local application imports
+from backend.chains import get_llm, get_openrouter_llm
+from backend.chains import create_broad_plan_draft_chain
+from backend.chains import create_artifact_chain
+
+# For Teaching Styles and Instructional Strategies Info
+from components.InfoSidebar import display_tips, display_teaching_styles_info
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
@@ -28,7 +38,9 @@ UI_TEXT = {
     "teaching_style": "📖 Teaching Style",
     "learning_objectives": "🎯 Learning Objectives (Optional)",
     "requirements": "📋 Requirements (Optional)",
+    "example_plan": "📄 Example Lesson Plan (Optional)",
     "generate_button": "🚀 Generate Plan",
+    "generate_learning_materials": "📦 Generate Learning Materials",
     "error_missing_fields": "Please fill out all required fields. The following fields are missing: ",
     "error_missing_field": "Please fill out all required fields. The following field is missing:",
     "generating_message": "Generating lesson plan, please wait...",
@@ -39,6 +51,7 @@ UI_TEXT = {
     "purpose_label": "Purpose: ",
     "method_label": "Method: ",
     "requirements_label": "Requirements: ",
+    "tab_names": ["📝 Create Lesson Plan", "📚 Generated Lesson Plan", "📦 Learning Materials"],
     "explanation": """Welcome to the AI Lesson Plan Generator! This tool is designed to help educators create 
 customized, effective, and engaging lesson plans tailored to their specific teaching needs. 
                     
@@ -85,6 +98,10 @@ TEACHING_STYLES = [
     {"name": "Delegator", "description": "A student-centered approach where teachers take on more of an observer role with students working independently or in groups. Promotes collaboration between students and peer learning. Popular for practical lessons, such as science labs, or those ideal for peer feedback, such as creative writing. May not be suitable for all students, subjects, or grade levels, and requires careful management to ensure active participation from all students."}
 ]
 
+BUTTON_TO_TAB = {
+    UI_TEXT["generate_button"]: UI_TEXT["tab_names"][1],
+    UI_TEXT["generate_learning_materials"]: UI_TEXT["tab_names"][2]
+}
 
 def init_session_state():
     """Initialize session state variables"""
@@ -136,6 +153,24 @@ def init_session_state():
     if 'selected_style_info' not in st.session_state:
         st.session_state.selected_style_info = None
 
+    if 'plan' not in st.session_state:
+        st.session_state.plan = None
+
+def switch_tabs(tab_name):
+    js = f"""
+    <script>
+        var tabContainer = window.parent.document.querySelector('.stTabs');
+        var tabButtons = tabContainer.querySelectorAll('[role="tab"]');
+        tabButtons.forEach(function(button) {{
+            if (button.innerText.trim() === "{tab_name}") {{
+                button.click();
+            }}
+        }});
+    </script>
+    """
+    # Execute the JavaScript code
+    st.components.v1.html(js, height=0, width=0)
+
 def valiate_form_data(form_data):
     """
     Validate the form data, ensuring required fields are filled
@@ -158,7 +193,6 @@ def render_header():
     display_tips()
     st.divider()
 
-
 def render_input_form():
     """Render the lesson plan input form"""
     # Store LLM instance in session state
@@ -168,147 +202,128 @@ def render_input_form():
         st.session_state.broad_chain = create_broad_plan_draft_chain(
             st.session_state.llm)
 
-    # Create two-column layout
-    left_col, right_col = st.columns([2, 1])
-
     # Store current selected teaching style
     current_styles = st.session_state.form_data["style"] if st.session_state.form_data["style"] else [
         TEACHING_STYLES[0]["name"]]
     if not isinstance(current_styles, list):
         current_styles = [current_styles]  # Compatible with old version data
 
-    with left_col:
-        # Start the form
-        with st.form(key="lesson_plan_input"):
-            # First row: Education Level and Duration
-            col1, col2 = st.columns(2)
+    # Start the form
+    with st.form(key="lesson_plan_input"):
+        # First row: Education Level and Duration
+        col1, col2 = st.columns(2)
 
-            with col1:
-                st.write(f"**{UI_TEXT['grade_level']}**")
-                grade_level = st.selectbox(
-                    UI_TEXT["grade_level"],
-                    GRADE_LEVELS,
-                    index=GRADE_LEVELS.index(
-                        st.session_state.form_data["grade_level"]) if st.session_state.form_data["grade_level"] else 4,
-                    label_visibility="collapsed"
-                )
-
-            with col2:
-                st.write(f"**{UI_TEXT['duration']}**")
-                duration = st.number_input(
-                    UI_TEXT["duration"],
-                    value=st.session_state.form_data["duration"] if st.session_state.form_data["duration"] else 60,
-                    label_visibility="collapsed"
-                )
-
-            # Second row: Topic takes the full width
-            st.write(f"**{UI_TEXT['topic']}**")
-            topic = st.text_input(
-                UI_TEXT["topic"],
-                value=st.session_state.form_data["topic"] if st.session_state.form_data["topic"] else "",
-                placeholder="Example: Introduction to Python Programming",
+        with col1:
+            st.write(f"**{UI_TEXT['grade_level']}**")
+            grade_level = st.selectbox(
+                UI_TEXT["grade_level"],
+                GRADE_LEVELS,
+                index=GRADE_LEVELS.index(
+                    st.session_state.form_data["grade_level"]) if st.session_state.form_data["grade_level"] else 4,
                 label_visibility="collapsed"
             )
 
-            # Teaching style - multiselect
-            style_names = [style["name"] for style in TEACHING_STYLES]
-            st.markdown(f'**{UI_TEXT['teaching_style']}**', help="Please see the sidebar located on the right for more details on each teaching style.")
-            styles = st.multiselect(
-                "Teaching Styles guide the structure of your lesson plan. You can select up to (3) styles. If multiple styles are selected, the tool will incorporate features from all selected styles.",
-                options=style_names,
-                default=current_styles,
-                max_selections=3,
+        with col2:
+            st.write(f"**{UI_TEXT['duration']}**")
+            duration = st.number_input(
+                UI_TEXT["duration"],
+                value=st.session_state.form_data["duration"] if st.session_state.form_data["duration"] else 60,
+                label_visibility="collapsed"
             )
 
-            # Add learning objectives with expander
-            with st.expander("Learning Objectives (Optional)", expanded=False):
-                # Explanation and link to Bloom's Taxonomy for guidance
-                st.markdown(
-                            """
-                            <div style="font-size: 14px; font-weight: 500; color: #31333F;">
-                            Learning objectives refer to what students should be able to do after the lesson. Clearly defining your learning objectives 
-                            helps guide the lesson plan and ensures that the lesson is focused and effective.
-                            <br/><br/>
-                            Need help defining learning objectives? Check out 
-                            <a href="https://tips.uark.edu/using-blooms-taxonomy/#gsc.tab=0" target="_blank" style="color: #1a73e8; text-decoration: none;">
-                                Bloom's Taxonomy
-                            </a>.
-                            <br/><br/>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-                learning_objectives = st.text_area(
-                    "Enter learning objectives",
-                    height=100,
-                    value="\n".join(
-                        st.session_state.form_data["objectives"]) if st.session_state.form_data["objectives"] else "",
-                    placeholder="Example:\n1. Write a simple Python program to print a message\n2. Understand the basic concepts of data types\n3. Apply loops to solve problems"
-                )
+        # Second row: Topic takes the full width
+        st.write(f"**{UI_TEXT['topic']}**")
+        topic = st.text_input(
+            UI_TEXT["topic"],
+            value=st.session_state.form_data["topic"] if st.session_state.form_data["topic"] else "",
+            placeholder="Example: Introduction to Python Programming",
+            label_visibility="collapsed"
+        )
 
-            # Add requirements with expander
-            with st.expander("Requirements (Optional)", expanded=False):
-                requirements = st.text_area(
-                    "Enter any additional requirements for the lesson below.",
-                    height=100,
-                    value="\n".join(
-                        st.session_state.form_data["requirements"]) if st.session_state.form_data["requirements"] else "",
-                    placeholder="Example:\n- Group discussion required\n- Include a quiz at the end\n- Use a specific textbook"
-                )
+        # Teaching style - multiselect
+        style_names = [style["name"] for style in TEACHING_STYLES]
+        st.markdown(f'**{UI_TEXT['teaching_style']}**', help="Please see the sidebar located on the right for more details on each teaching style.")
+        styles = st.multiselect(
+            "Teaching Styles guide the structure of your lesson plan. You can select up to (3) styles. If multiple styles are selected, the tool will incorporate features from all selected styles.",
+            options=style_names,
+            default=current_styles,
+            max_selections=3,
+        )
 
-            # Add example lesson plan input area with expander
-            with st.expander("Example Lesson Plan (Optional)", expanded=False):
-                example = st.text_area(
-                    "Enter an example lesson plan below as reference to guide the AI.",
-                    height=150,
-                    value=st.session_state.form_data["example"] if st.session_state.form_data["example"] else "",
-                    placeholder="You can provide a reference lesson plan example here. If left empty, default examples will be used."
-                )
-           
-            # Add file upload component
-            from components.FileUpload import FileUpload
-            file_uploader = FileUpload()
-
-            # File upload component
-            uploaded_files = st.file_uploader(
-                "📄 Upload Reference Materials (Optional) - Max (2) PDF Files",
-                type=["pdf"],
-                accept_multiple_files=True
+        # Add learning objectives with expander
+        with st.expander(UI_TEXT["learning_objectives"], expanded=False):
+            # Explanation and link to Bloom's Taxonomy for guidance
+            st.markdown(
+                        """
+                        <div style="font-size: 14px; font-weight: 500; color: #31333F;">
+                        Learning objectives refer to what students should be able to do after the lesson. Clearly defining your learning objectives 
+                        helps guide the lesson plan and ensures that the lesson is focused and effective.
+                        <br/><br/>
+                        Need help defining learning objectives? Check out 
+                        <a href="https://tips.uark.edu/using-blooms-taxonomy/#gsc.tab=0" target="_blank" style="color: #1a73e8; text-decoration: none;">
+                            Bloom's Taxonomy
+                        </a>.
+                        <br/><br/>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+            learning_objectives = st.text_area(
+                "Enter learning objectives",
+                height=100,
+                value="\n".join(
+                    st.session_state.form_data["objectives"]) if st.session_state.form_data["objectives"] else "",
+                placeholder="Example:\n1. Write a simple Python program to print a message\n2. Understand the basic concepts of data types\n3. Apply loops to solve problems"
             )
 
-            if uploaded_files:
-                # Save and process files
-                from backend.file_processor import FileProcessor
-                file_paths = file_uploader.save_uploaded_files(uploaded_files)
-                processed_files = FileProcessor.process_files(file_paths)
+        # Add requirements with expander
+        with st.expander(UI_TEXT["requirements"], expanded=False):
+            requirements = st.text_area(
+                "Enter any additional requirements for the lesson below.",
+                height=100,
+                value="\n".join(
+                    st.session_state.form_data["requirements"]) if st.session_state.form_data["requirements"] else "",
+                placeholder="Example:\n- Group discussion required\n- Include a quiz at the end\n- Use a specific textbook"
+            )
 
-                # Merge all file texts
-                reference_text = "\n\n".join(processed_files.values())
-                st.session_state.form_data["reference_text"] = reference_text
-                st.session_state.form_data["reference_files"] = [
-                    f.name for f in uploaded_files]
+        # Add example lesson plan input area with expander
+        with st.expander(UI_TEXT["example_plan"], expanded=False):
+            example = st.text_area(
+                "Enter an example lesson plan below as reference to guide the AI.",
+                height=150,
+                value=st.session_state.form_data["example"] if st.session_state.form_data["example"] else "",
+                placeholder="You can provide a reference lesson plan example here. If left empty, default examples will be used."
+            )
+        
+        # Add file upload component
+        from components.FileUpload import FileUpload
+        file_uploader = FileUpload()
 
-                # Display processing results
-                st.success(
-                    f"Successfully processed {len(processed_files)} reference files")
+        # File upload component
+        uploaded_files = st.file_uploader(
+            "📄 Upload Reference Materials (Optional) - Max (2) PDF Files",
+            type=["pdf"],
+            accept_multiple_files=True
+        )
 
-            # Ensure submit button displays correctly
-            submitted = st.form_submit_button(label=UI_TEXT["generate_button"])
+        if uploaded_files:
+            # Save and process files
+            from backend.file_processor import FileProcessor
+            file_paths = file_uploader.save_uploaded_files(uploaded_files)
+            processed_files = FileProcessor.process_files(file_paths)
 
-    # Display teaching style info dialog
-    with right_col:
-        display_teaching_styles_info()
+            # Merge all file texts
+            reference_text = "\n\n".join(processed_files.values())
+            st.session_state.form_data["reference_text"] = reference_text
+            st.session_state.form_data["reference_files"] = [
+                f.name for f in uploaded_files]
 
-    # Display broad plan and buttons if available
-    if st.session_state.broad_plan:
-        with left_col:
-            # Check if this is a critique_and_improve result
-            if isinstance(st.session_state.broad_plan, dict) and all(k in st.session_state.broad_plan for k in ["broad_plan_json", "critique_text", "revised_plan"]):
-                # Use specialized function to display improved plan
-                display_revised_plan(st.session_state.broad_plan)
-            else:
-                # Use original function to display regular plan
-                display_broad_plan(st.session_state.broad_plan)
+            # Display processing results
+            st.success(
+                f"Successfully processed {len(processed_files)} reference files")
+
+        # Ensure submit button displays correctly
+        submitted = st.form_submit_button(label=UI_TEXT["generate_button"])
 
     if submitted:
         # Store form data in session state
@@ -327,94 +342,124 @@ def render_input_form():
             "example": example.strip() if example else ""
         })
 
+        # Check duration is valid whole number
+        if not isinstance(duration, int) or duration <= 0:
+            st.error("Please enter a duration greater than 0 minutes.")
         # Check for missing fields and display error if needed
         missing = valiate_form_data(st.session_state.form_data)
         if len(missing) > 1:
             error_message = UI_TEXT["error_missing_fields"]
             for field in missing:
                 error_message += f"\n- **{field.title()}**"
-            with left_col:
-                st.error(error_message)
-            return
+            st.error(error_message)
         elif len(missing) == 1:
-            with left_col:
-                st.error(f"{UI_TEXT['error_missing_field']} **{missing[0].title()}**")
-            return
+            st.error(f"{UI_TEXT['error_missing_field']} **{missing[0].title()}**")
         else:
             # Reset the display state
             st.session_state.show_buttons = False
             st.session_state.full_plan = None
             
-            generate_lesson_plan(
-                grade_level,
-                topic,
-                duration,
-                styles,
-                objectives_list,
-                requirements_list
-            )
+            with st.spinner(UI_TEXT["generating_message"]):
+                generate_lesson_plan(
+                    grade_level,
+                    topic,
+                    duration,
+                    styles,
+                    objectives_list,
+                    requirements_list
+                )
+
+            # Info message in case tabs don't change
+            st.success(f"Lesson plan generated successfully! Please switch to the **{UI_TEXT["tab_names"][1]}** tab to view the results.")
+
+            # Switch active tab to plan
+            switch_tabs(BUTTON_TO_TAB[UI_TEXT["generate_button"]])
+
+def display_input_details():
+    """
+    Display user's submitted input details
+    """
+    with st.container(border=True):
+        grade_level = st.session_state.form_data["grade_level"]
+        topic = st.session_state.form_data["topic"]
+        duration = st.session_state.form_data["duration"]
+        styles = st.session_state.form_data["style"]
+        objectives = st.session_state.form_data["objectives"]
+        requirements = st.session_state.form_data["requirements"]
+
+        st.write("##### 📝 Provided Lesson Plan Details")
+        st.write(f"**{UI_TEXT['grade_level']}**: {grade_level}")
+        st.write(f"**{UI_TEXT['topic']}**: {topic}")
+        st.write(f"**{UI_TEXT['duration']}**: {duration} minutes")
+        st.write(f"**{UI_TEXT['teaching_style']}**: {', '.join(styles)}")
+        if st.session_state.form_data["objectives"]:
+            st.write(f"**🎯 Learning Objectives**: ")
+            for obj in objectives:
+                st.write(f"{obj}")
+        if st.session_state.form_data["requirements"]:
+            st.write(f"**📋 Requirements**:")
+            for req in requirements:
+                st.write(f"{req}")
         
 def generate_lesson_plan(grade_level, topic, duration, styles, objectives, requirements):
     """Generate the lesson plan"""
-    with st.spinner(UI_TEXT["generating_message"]):
-        try:
-            # Initialize LLM and chains
-            llm = get_llm(model_name="gpt-4o", temperature=0)
-            llm2 = get_openrouter_llm(
-                model_name="anthropic/claude-3.7-sonnet", temperature=0)
-            broad_chain = create_broad_plan_draft_chain(llm)
+    try:
+        # Initialize LLM and chains
+        llm = get_llm(model_name="gpt-4o", temperature=0)
+        llm2 = get_openrouter_llm(
+            model_name="anthropic/claude-3.7-sonnet", temperature=0)
+        broad_chain = create_broad_plan_draft_chain(llm)
 
-            # Prepare reference document content
-            reference_text = st.session_state.form_data.get(
-                "reference_text", "")
+        # Prepare reference document content
+        reference_text = st.session_state.form_data.get(
+            "reference_text", "")
 
-            # Format objectives and requirements as proper JSON arrays
-            objectives_json = json.dumps(objectives) if isinstance(
-                objectives, list) else objectives
-            requirements_json = json.dumps(requirements) if isinstance(
-                requirements, list) else requirements
+        # Format objectives and requirements as proper JSON arrays
+        objectives_json = json.dumps(objectives) if isinstance(
+            objectives, list) else objectives
+        requirements_json = json.dumps(requirements) if isinstance(
+            requirements, list) else requirements
 
-            # Convert styles list to JSON string
-            styles_json = json.dumps(styles) if isinstance(
-                styles, list) else json.dumps([styles])
+        # Convert styles list to JSON string
+        styles_json = json.dumps(styles) if isinstance(
+            styles, list) else json.dumps([styles])
 
-            # Generate broad plan
-            broad_result = broad_chain.invoke({
-                "grade_level": grade_level,
-                "topic": topic,
-                "duration": duration,
-                "style": styles_json,  # Pass JSON formatted multiple teaching styles
-                "learning_objectives": objectives_json,
-                "requirements": requirements_json,
-                "broad_plan_feedback": "",
-                "reference_context": reference_text
-            })
+        # Generate broad plan
+        broad_result = broad_chain.invoke({
+            "grade_level": grade_level,
+            "topic": topic,
+            "duration": duration,
+            "style": styles_json,  # Pass JSON formatted multiple teaching styles
+            "learning_objectives": objectives_json,
+            "requirements": requirements_json,
+            "broad_plan_feedback": "",
+            "reference_context": reference_text
+        })
 
-            # Ensure the result is proper JSON
-            if isinstance(broad_result, str):
-                try:
-                    # Try to parse if it's a JSON string
-                    broad_result = json.loads(broad_result)
-                except json.JSONDecodeError:
-                    # If it contains markdown code blocks, extract the JSON
-                    if "```json" in broad_result:
-                        json_content = broad_result.split(
-                            "```json")[1].split("```")[0].strip()
-                        broad_result = json.loads(json_content)
+        # Ensure the result is proper JSON
+        if isinstance(broad_result, str):
+            try:
+                # Try to parse if it's a JSON string
+                broad_result = json.loads(broad_result)
+            except json.JSONDecodeError:
+                # If it contains markdown code blocks, extract the JSON
+                if "```json" in broad_result:
+                    json_content = broad_result.split(
+                        "```json")[1].split("```")[0].strip()
+                    broad_result = json.loads(json_content)
 
-            # Store the result and update step
-            st.session_state.broad_plan = broad_result
-            st.session_state.current_step = "broad_plan"
-            st.session_state.show_buttons = True
-            st.rerun()
+        # Store the result and update step
+        st.session_state.broad_plan = broad_result
+        st.session_state.current_step = "broad_plan"
+        st.session_state.show_buttons = True
 
-        except Exception as e:
-            st.error(f"{UI_TEXT['error_prefix']}{str(e)}")
-            import traceback
-            st.error(f"Detailed error: {traceback.format_exc()}")
-            # Display the raw result for debugging
-            st.write("Raw result:")
-            st.write(broad_result)
+    except Exception as e:
+        st.error(f"{UI_TEXT['error_prefix']}{str(e)}")
+        import traceback
+        st.error(f"Detailed error: {traceback.format_exc()}")
+        # Display the raw result for debugging
+        st.write("Raw result:")
+        st.write(broad_result)
 
 
 def export_learning_materials_to_markdown(plan_data):
@@ -479,7 +524,7 @@ def export_learning_materials_to_markdown(plan_data):
             markdown_content += "---\n\n"
 
     if not has_materials:
-        return "No learning materials have been generated yet."
+        return "No learning materials have been generated yet. Click **{UI_TEXT['generate_learning_materials']}** in any teaching phase of your lesson plan to generate materials"
 
     return markdown_content
 
@@ -490,11 +535,10 @@ def display_learning_materials(broad_plan):
     Args:
         broad_plan: Teaching plan containing learning materials
     """
-    if not broad_plan or not broad_plan.get("outline"):
-        return
-
-    st.markdown("---")
     st.markdown("## 📚 Learning Materials")
+    if not broad_plan or not broad_plan.get("outline"):
+        st.info(f"No learning materials have been generated yet. Click **{UI_TEXT['generate_learning_materials']}** in any teaching phase of your lesson plan to generate materials")
+        return
 
     def display_quiz(quiz_content):
         """Display quiz content"""
@@ -547,44 +591,42 @@ def display_learning_materials(broad_plan):
     for phase in broad_plan.get("outline", []):
         if not phase.get("artifacts"):
             continue
+        else: 
+            with st.expander(f"{phase['phase']} ({phase['duration']})", expanded=True):
 
-        has_materials = True
-        st.markdown(f"### {phase['phase']}")
+                has_materials = True
 
-        # Use tabs if multiple materials exist
-        if len(phase["artifacts"]) > 1:
-            tabs = st.tabs(
-                [f"{artifact['type'].title()}" for artifact in phase["artifacts"]])
-            for tab, artifact in zip(tabs, phase["artifacts"]):
-                with tab:
+                # Use tabs if multiple materials exist
+                if len(phase["artifacts"]) > 1:
+                    tabs = st.tabs(
+                        [f"{artifact['type'].title()}" for artifact in phase["artifacts"]])
+                    for tab, artifact in zip(tabs, phase["artifacts"]):
+                        with tab:
+                            if artifact['type'] == "quiz":
+                                display_quiz(artifact["content"])
+                            elif artifact['type'] == "code_practice":
+                                display_code_practice(artifact["content"])
+                            elif artifact['type'] == "slides":
+                                display_slides(artifact["content"])
+                else:
+                    # Display directly if only one material
+                    artifact = phase["artifacts"][0]
                     if artifact['type'] == "quiz":
                         display_quiz(artifact["content"])
                     elif artifact['type'] == "code_practice":
                         display_code_practice(artifact["content"])
                     elif artifact['type'] == "slides":
                         display_slides(artifact["content"])
-        else:
-            # Display directly if only one material
-            artifact = phase["artifacts"][0]
-            with st.expander(f"{artifact['type'].title()}", expanded=True):
-                if artifact['type'] == "quiz":
-                    display_quiz(artifact["content"])
-                elif artifact['type'] == "code_practice":
-                    display_code_practice(artifact["content"])
-                elif artifact['type'] == "slides":
-                    display_slides(artifact["content"])
 
-        st.markdown("---")
-
-    if not has_materials:
-        st.info("No learning materials have been generated yet. Click 'Generate Learning Materials' in any phase to create materials.")
-    else:
+    if has_materials:
         # Add dedicated button for downloading learning materials
-        st.markdown("### 📥 Download Learning Materials")
+        st.divider()
         materials_markdown = export_learning_materials_to_markdown(broad_plan)
         st.markdown(create_download_link(materials_markdown, "learning_materials.md",
                     "📥 Download Materials as Markdown"), unsafe_allow_html=True)
-
+    
+    if not has_materials:
+        st.info(f"No learning materials have been generated yet. Click **{UI_TEXT['generate_learning_materials']}** in any teaching phase of your lesson plan to generate materials")
 
 def display_broad_plan(plan):
     """Display the course outline"""
@@ -705,7 +747,7 @@ def display_broad_plan(plan):
                         st.markdown("---")
                         col1, col2 = st.columns([2, 4])
                         with col1:
-                            if st.button("📦 Generate Learning Materials", key=f"add_artifact_{i}"):
+                            if st.button(UI_TEXT["generate_learning_materials"], key=f"add_artifact_{i}"):
                                 # Create a closure to save broad_plan
                                 def generate_callback(params):
                                     return handle_artifact_generation(params, broad_plan)
@@ -724,7 +766,6 @@ def display_broad_plan(plan):
                 artifact_modal.render_dialog()
 
                 st.markdown("---")
-                add_download_button(broad_plan)
 
                 # Add buttons for plan enhancement
                 col1, col2 = st.columns([1, 1])
@@ -738,14 +779,16 @@ def display_broad_plan(plan):
                     if st.button("🔍 Critique & Improve", type="secondary"):
                         critique_and_improve()
 
+                add_download_button(broad_plan)
+
             # If structure is not correct, display original data
             if not broad_plan:
                 st.warning("Plan structure is not as expected. Raw data:")
                 st.write(plan)
 
-            # Display learning materials
             if broad_plan:
-                display_learning_materials(broad_plan)
+                # Store the plan in session state
+                st.session_state.plan = broad_plan
 
     except Exception as e:
         st.error(f"Error displaying plan: {str(e)}")
@@ -1229,6 +1272,9 @@ def handle_artifact_generation(artifact_result, broad_plan):
                     "broad_plan": broad_plan
                 }, ensure_ascii=False)
             }
+
+            # Switch to learning materials tab
+            switch_tabs(BUTTON_TO_TAB[UI_TEXT["generate_learning_materials"]])
 
             return True
 
@@ -1733,12 +1779,55 @@ def main():
     # Header with title and explanation
     render_header()
 
-    # Show revision dialog if needed
-    if st.session_state.show_revision_dialog:
-        revision_dialog()
-    else:
-        render_input_form()
+    # Create two columns
+    left_col, right_col = st.columns([2, 1])
 
+    # Create tabs
+    with left_col:
+        tabs = st.tabs(UI_TEXT["tab_names"])
+
+        # Tab 1: Form
+        with tabs[0]:
+            render_input_form()
+        
+        # Tab 2: Generated plan or revision dialog
+        with tabs[1]:
+            if st.session_state.show_revision_dialog:
+                revision_dialog()
+            elif st.session_state.broad_plan:
+                # Check if this is a critique_and_improve result
+                if isinstance(st.session_state.broad_plan, dict) and all(k in st.session_state.broad_plan for k in ["broad_plan_json", "critique_text", "revised_plan"]):
+                    # Use specialized function to display improved plan
+                    display_revised_plan(st.session_state.broad_plan)
+                else:
+                    # Use original function to display regular plan
+                    display_broad_plan(st.session_state.broad_plan)
+            else:
+                st.header(UI_TEXT["plan_title"])
+                st.info(f"No lesson plan has been generated yet. Please fill out the form in the **{UI_TEXT["tab_names"][0]}** tab and click **{UI_TEXT["generate_button"]}**.")
+
+        # Tab 3: Learning materials
+        with tabs[2]:
+            display_learning_materials(st.session_state.plan)
+
+    with right_col:
+        # Empty space padding to line up with left column after tabs
+        st.markdown(
+            """
+            <div style="height: 59px;"></div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # Display inputted details after submitting
+        # Only when plan has already been generated
+        if st.session_state.broad_plan:
+            display_input_details()
+
+        # Teaching styles info
+        display_teaching_styles_info()
+
+    
 
 if __name__ == "__main__":
     main()
