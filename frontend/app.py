@@ -776,7 +776,7 @@ def display_broad_plan(plan):
                         st.rerun()
                 with col2:
                     # Add critique & improve button (automatic enhancement)
-                    if st.button("🔍 Critique & Improve", type="secondary"):
+                    if st.button("🔍 Refine with AI", type="secondary"):
                         critique_and_improve()
 
                 add_download_button(broad_plan)
