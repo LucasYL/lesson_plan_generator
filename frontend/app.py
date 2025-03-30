@@ -1494,9 +1494,6 @@ def display_revised_plan(plan_data):
 
             add_download_button(broad_plan)
 
-            # Display learning materials
-            display_learning_materials(broad_plan)
-
     except Exception as e:
         st.error(f"Error displaying improved plan: {str(e)}")
         st.write("Original plan data:")
