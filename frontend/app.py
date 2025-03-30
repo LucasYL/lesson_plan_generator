@@ -17,7 +17,7 @@ from backend.chains import create_broad_plan_draft_chain
 from backend.chains import create_artifact_chain
 
 # For Teaching Styles and Instructional Strategies Info
-from components.InfoSidebar import render_sidebar
+from components.InfoSidebar import display_tips, display_teaching_styles_info
 
 # UI text constants
 UI_TEXT = {
@@ -37,7 +37,35 @@ UI_TEXT = {
     "phases_title": "📊 Teaching Phases",
     "purpose_label": "Purpose: ",
     "method_label": "Method: ",
-    "requirements_label": "Requirements: "
+    "requirements_label": "Requirements: ",
+    "explanation": """Welcome to the AI Lesson Plan Generator! This tool is designed to help educators create 
+customized, effective, and engaging lesson plans tailored to their specific teaching needs. 
+                    
+With this tool, you can: 
+- 🏫 **Select the Education Level**: Choose from elementary, middle, high school, undergraduate, or graduate.
+- 📝 **Specify the Topic and Duration**: Define the focus and length of your lesson.
+- 📖 **Choose Teaching Styles**: Select up to three teaching styles to guide the structure of your lesson plan.
+- 🎯 **Define Learning Objectives**: Ensure the lesson aligns with your educational goals.
+- 📄 **Upload Reference Materials**: Provide additional context for a more personalized plan.
+- 📦 **Generate Learning Materials**: Create supplementary materials such as slides, quizzes, and more.  
+
+<br />
+
+Please note that the following details are **required**: education level, topic, duration, and teaching style.
+The example lesson plan, reference materials, learning objectives, and requirements are **optional** but can help refine the lesson plan further.
+
+##### Steps to Generate a Lesson Plan:
+1. 📝 **Fill Out the Form**: Provide the required information (e.g., education level, topic, duration) and any optional details (e.g., learning objectives, reference materials).
+2. 🚀 **Generate the Plan**: Click the **Generate Plan** button to create a detailed lesson plan tailored to your inputs.
+3. ✏️ **Review and Revise**: Review the generated lesson plan and make any necessary revisions using the **Revise Plan** button to edit manually, 
+    or the **Refine with AI** button to receive AI-generated suggestions for improvement.
+4. 📦 **Generate Learning Materials**: Click the **Generate Learning Materials** button in each phase to create supplementary materials such as slides and quizzes.
+5. 📥 **Download Your Plan**: Download the complete lesson plan and learning materials as a Markdown file for easy reference.
+
+This tool leverages AI to save you time and effort in the lesson planning process, allowing you to focus on what you do best - teaching. Get started today
+by filling out the form below!
+        """
+    ""
 }
 
 GRADE_LEVELS = [
@@ -105,6 +133,15 @@ def init_session_state():
         st.session_state.show_style_info = False
     if 'selected_style_info' not in st.session_state:
         st.session_state.selected_style_info = None
+
+def render_header():
+    """
+    Render the header section with explanation of the tool
+    """
+    st.header(UI_TEXT["title"])
+    st.markdown(UI_TEXT["explanation"], unsafe_allow_html=True)
+    display_tips()
+    st.divider()
 
 def render_input_form():
     """Render the lesson plan input form"""
@@ -272,7 +309,7 @@ def render_input_form():
     
     # Display teaching style info dialog
     with right_col:
-        render_sidebar()
+        display_teaching_styles_info()
     
     # Display broad plan and buttons if available
     if st.session_state.broad_plan:
@@ -1629,6 +1666,9 @@ def main():
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     
     init_session_state()
+
+    # Header with title and explanation
+    render_header()
     
     # Show revision dialog if needed
     if st.session_state.show_revision_dialog:
