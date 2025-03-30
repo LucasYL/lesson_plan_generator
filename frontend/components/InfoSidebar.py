@@ -35,7 +35,7 @@ def display_teaching_styles_info():
     """
     with st.container(border=True):
       # Teaching Styles
-      st.subheader("Teaching Styles")
+      st.write(("##### Teaching Styles"))
       st.write(teaching_info["description"])
       st.write(f"Access to [full PDF of Grasha's Model]({teaching_info["pdf"]}).")
 
