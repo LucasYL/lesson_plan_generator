@@ -1471,7 +1471,6 @@ def display_revised_plan(plan_data):
             artifact_modal.render_dialog()
 
             st.markdown("---")
-            add_download_button(broad_plan)
 
             # Add enhancement buttons
             col1, col2, col3 = st.columns([1, 1, 2])
@@ -1485,13 +1484,15 @@ def display_revised_plan(plan_data):
 
             with col2:
                 # Add critique & improve button to enable multiple rounds of critique
-                if st.button("🔍 Critique & Improve", type="secondary", key="critique_again"):
+                if st.button("🔍 Refine with AI", type="secondary", key="critique_again"):
                     # Store the current improved plan in a temporary variable
                     temp_plan = {"broad_plan": broad_plan}
                     # Update session state
                     st.session_state.broad_plan = temp_plan
                     # Call critique_and_improve
                     critique_and_improve()
+
+            add_download_button(broad_plan)
 
             # Display learning materials
             display_learning_materials(broad_plan)
