@@ -72,8 +72,8 @@ The example lesson plan, reference materials, learning objectives, and requireme
 1. 📝 **Fill Out the Form**: Provide the required information (e.g., education level, topic, duration) and any optional details (e.g., learning objectives, reference materials).
 2. 🚀 **Generate the Plan**: Click the **Generate Plan** button to create a detailed lesson plan tailored to your inputs.
 3. ✏️ **Review and Revise**: Review the generated lesson plan and make any necessary revisions using the **Revise Plan** button to edit manually, 
-    or the **Refine with AI** button to receive AI-generated suggestions for improvement.
-4. 📦 **Generate Learning Materials**: Click the **Generate Learning Materials** button in each phase to create supplementary materials such as slides and quizzes.
+    or the **Refine with AI** button to receive AI-generated suggestions for improvement. Once satisfied, click **Complete Revision Phase** to finalize the plan.
+4. 📦 **Generate Learning Materials**: Click the **Generate Learning Materials** button in any teaching phase to create supplementary materials such as slides and quizzes.
 5. 📥 **Download Your Plan**: Download the complete lesson plan and learning materials as a Markdown file for easy reference.
 
 This tool leverages AI to save you time and effort in the lesson planning process, allowing you to focus on what you do best - teaching. Get started today
@@ -102,6 +102,26 @@ BUTTON_TO_TAB = {
     UI_TEXT["generate_button"]: UI_TEXT["tab_names"][1],
     UI_TEXT["generate_learning_materials"]: UI_TEXT["tab_names"][2]
 }
+
+# Style for buttons to be next to each other (columns are limited to width of element)
+FIXED_COL = """
+<style class="hide">
+    .element-container:has(.hide) {
+        display: none;
+    }
+    div[data-testid="stVerticalBlock"]:has(> .element-container .horizontal-marker) {
+        display: flex;
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: baseline;
+    }
+    div[data-testid="stVerticalBlock"]:has(> .element-container .horizontal-marker) div {
+        width: max-content !important;
+    }
+</style>
+"""
+
 
 def init_session_state():
     """Initialize session state variables"""
@@ -155,6 +175,10 @@ def init_session_state():
 
     if 'plan' not in st.session_state:
         st.session_state.plan = None
+
+    # Check lesson plan is finalized
+    if 'finalized' not in st.session_state:
+        st.session_state.finalized = False
 
 def switch_tabs(tab_name):
     js = f"""
@@ -358,6 +382,7 @@ def render_input_form():
             # Reset the display state
             st.session_state.show_buttons = False
             st.session_state.full_plan = None
+            st.session_state.finalized = False
             
             with st.spinner(UI_TEXT["generating_message"]):
                 generate_lesson_plan(
@@ -524,7 +549,7 @@ def export_learning_materials_to_markdown(plan_data):
             markdown_content += "---\n\n"
 
     if not has_materials:
-        return "No learning materials have been generated yet. Click **{UI_TEXT['generate_learning_materials']}** in any teaching phase of your lesson plan to generate materials"
+        return "No learning materials have been generated yet. After finalizing your lesson plan, click **{UI_TEXT['generate_learning_materials']}** in any teaching phase of your lesson plan to generate materials."
 
     return markdown_content
 
@@ -537,7 +562,7 @@ def display_learning_materials(broad_plan):
     """
     st.markdown("## 📚 Learning Materials")
     if not broad_plan or not broad_plan.get("outline"):
-        st.info(f"No learning materials have been generated yet. Click **{UI_TEXT['generate_learning_materials']}** in any teaching phase of your lesson plan to generate materials")
+        st.info(f"No learning materials have been generated yet. After finalizing your lesson plan, click **{UI_TEXT['generate_learning_materials']}** in any teaching phase of your lesson plan to generate materials.")
         return
 
     def display_quiz(quiz_content):
@@ -626,7 +651,41 @@ def display_learning_materials(broad_plan):
                     "📥 Download Materials as Markdown"), unsafe_allow_html=True)
     
     if not has_materials:
-        st.info(f"No learning materials have been generated yet. Click **{UI_TEXT['generate_learning_materials']}** in any teaching phase of your lesson plan to generate materials")
+        st.info(f"No learning materials have been generated yet. After finalizing your lesson plan, click **{UI_TEXT['generate_learning_materials']}** in any teaching phase of your lesson plan to generate materials.")
+
+def add_finalize_button():
+    """Add finalize button to the UI"""
+    st.markdown(
+        """
+        <style>
+        .element-container:has(style){
+            display: none;
+        }
+        #button-after {
+            display: none;
+        }
+        .element-container:has(#button-after) {
+            display: none;
+        }
+        .element-container:has(#button-after) + div button {
+            background-color: #4CAF50;
+            padding: 15px 25px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown('<span id="button-after"></span>', unsafe_allow_html=True)
+    if st.button("**☑️ Complete Revision Phase**"):
+        st.session_state.finalized = True
+        st.rerun()
+
+def add_undo_finalize_button():
+    """Add undo finalize button to the UI"""
+    if st.button("🔙 Go Back to Revising Lesson Plan"):
+        st.session_state.finalized = False
+        st.rerun()
+
 
 def display_broad_plan(plan):
     """Display the course outline"""
@@ -744,9 +803,8 @@ def display_broad_plan(plan):
                             st.write(phase["description"])
 
                         # Add generate materials button
-                        st.markdown("---")
-                        col1, col2 = st.columns([2, 4])
-                        with col1:
+                        if st.session_state.finalized:
+                            st.markdown("---")
                             if st.button(UI_TEXT["generate_learning_materials"], key=f"add_artifact_{i}"):
                                 # Create a closure to save broad_plan
                                 def generate_callback(params):
@@ -767,19 +825,33 @@ def display_broad_plan(plan):
 
                 st.markdown("---")
 
-                # Add buttons for plan enhancement
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    # Add revise plan button (opens dialog)
-                    if st.button("✏️ Revise Plan", type="primary"):
+                # Add buttons for plan enhancement if in revision phase
+                if not st.session_state.finalized:
+                    st.markdown(FIXED_COL, unsafe_allow_html=True)
+                    with st.container():
+                        st.markdown('<span class="hide horizontal-marker"></span>', unsafe_allow_html=True)
+                        # Add revise plan button (opens dialog)
+                        revise_button_clicked = st.button("✏️ Revise Plan")
+                        # Add critique & improve button (automatic enhancement)
+                        critique_button_clicked = st.button("🔍 Refine with AI")
+
+                    # Handle revise button click
+                    if revise_button_clicked:
                         st.session_state.show_revision_dialog = True
                         st.rerun()
-                with col2:
-                    # Add critique & improve button (automatic enhancement)
-                    if st.button("🔍 Refine with AI", type="secondary"):
+
+                    # Handle critique button click
+                    if critique_button_clicked:
                         critique_and_improve()
 
-                add_download_button(broad_plan)
+                    # Add button to end revision phase and finalize plan
+                    add_finalize_button()
+
+                # If plan is finalized, display success message, download button, and undo finalize button
+                if st.session_state.finalized:
+                    st.success(f"Lesson plan finalized. Click **{UI_TEXT["generate_learning_materials"]}** as needed in any teaching phase to generate supplementary materials.")
+                    add_download_button(broad_plan)
+                    add_undo_finalize_button()
 
             # If structure is not correct, display original data
             if not broad_plan:
@@ -1033,9 +1105,10 @@ def revision_dialog():
     st.session_state.revision_data['feedback'] = feedback
 
     # Add buttons
-    col1, col2, col3 = st.columns([1, 1, 4])
-    with col1:
-        if st.button("💾 Save & Apply", type="primary"):
+    st.markdown(FIXED_COL, unsafe_allow_html=True)
+    with st.container():
+        st.markdown('<span class="hide horizontal-marker"></span>', unsafe_allow_html=True)
+        if st.button("💾 Save & Apply"):
             # Check if there are actual changes
             if not phase_changes and not feedback.strip():
                 st.warning(
@@ -1189,7 +1262,6 @@ def revision_dialog():
                     import traceback
                     st.error(f"Detailed error: {traceback.format_exc()}")
 
-    with col2:
         if st.button("❌ Cancel"):
             st.session_state.show_revision_dialog = False
             st.session_state.revision_data = {'phases': [], 'feedback': ""}
@@ -1420,7 +1492,7 @@ def display_revised_plan(plan_data):
 
         # Display plan content
         with st.container():
-            st.header(UI_TEXT["plan_title"] + " (Improved)")
+            st.header(UI_TEXT["plan_title"] + " :green[(Improved)]")
 
             # Display learning objectives
             st.write("#### 🎯 Learning Objectives")
@@ -1452,39 +1524,46 @@ def display_revised_plan(plan_data):
                         st.write(phase["description"])
 
                     # Add generate materials button
-                    st.markdown("---")
-                    if st.button("📦 Generate Learning Materials", key=f"add_artifact_revised_{i}"):
-                        def generate_callback(params):
-                            return handle_artifact_generation(params, broad_plan)
-                        artifact_modal.show(
-                            phase_id=str(i),
-                            phase_content={
-                                "phase": phase["phase"],
-                                "purpose": phase.get("purpose", ""),
-                                "description": phase.get("description", "")
-                            },
-                            generate_callback=generate_callback
-                        )
-                        st.rerun()
+                    if st.session_state.finalized:
+                        st.markdown("---")
+                        if st.button(UI_TEXT["generate_learning_materials"], key=f"add_artifact_revised_{i}"):
+                            def generate_callback(params):
+                                return handle_artifact_generation(params, broad_plan)
+                            artifact_modal.show(
+                                phase_id=str(i),
+                                phase_content={
+                                    "phase": phase["phase"],
+                                    "purpose": phase.get("purpose", ""),
+                                    "description": phase.get("description", "")
+                                },
+                                generate_callback=generate_callback
+                            )
+                            st.rerun()
 
             # Render artifact dialog
             artifact_modal.render_dialog()
 
             st.markdown("---")
 
-            # Add enhancement buttons
-            col1, col2, col3 = st.columns([1, 1, 2])
-            with col1:
-                # Always show Revise Plan button regardless of critique status
-                if st.button("✏️ Revise Plan", type="primary", key="revise_improved_plan"):
+            # Add enhancement buttons if in revision phase
+            if not st.session_state.finalized:
+                st.markdown(FIXED_COL, unsafe_allow_html=True)
+                with st.container():
+                    st.markdown('<span class="hide horizontal-marker"></span>', unsafe_allow_html=True)
+                    # Always show Revise Plan button regardless of critique status
+                    revise_button_clicked = st.button("✏️ Revise Plan", key="revise_improved_plan")
+                    # Add critique & improve button to enable multiple rounds of critique
+                    critique_button_clicked = st.button("🔍 Refine with AI", key="critique_again")
+                
+                # Handle revise button click
+                if revise_button_clicked:
                     # Store the current plan in session state for the revision dialog
                     st.session_state.revision_plan_data = broad_plan
                     st.session_state.show_revision_dialog = True
                     st.rerun()
 
-            with col2:
-                # Add critique & improve button to enable multiple rounds of critique
-                if st.button("🔍 Refine with AI", type="secondary", key="critique_again"):
+                # Handle critique button click
+                if critique_button_clicked:
                     # Store the current improved plan in a temporary variable
                     temp_plan = {"broad_plan": broad_plan}
                     # Update session state
@@ -1492,7 +1571,14 @@ def display_revised_plan(plan_data):
                     # Call critique_and_improve
                     critique_and_improve()
 
-            add_download_button(broad_plan)
+                # Add button to end revision phase and finalize the plan
+                add_finalize_button()
+            
+            # If plan is finalized, display success message, download button, and undo finalize button
+            if st.session_state.finalized:
+                st.success(f"Lesson plan finalized. Click **{UI_TEXT["generate_learning_materials"]}** as needed in any teaching phase to create supplementary materials.")
+                add_download_button(broad_plan)
+                add_undo_finalize_button()
 
     except Exception as e:
         st.error(f"Error displaying improved plan: {str(e)}")

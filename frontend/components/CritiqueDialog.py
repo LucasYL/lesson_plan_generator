@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 from typing import List, Dict, Any, Callable
+from frontend.app import FIXED_COL
 
 class CritiqueDialog:
     def __init__(self):
@@ -53,9 +54,10 @@ class CritiqueDialog:
                 st.markdown("---")
         
         # Buttons
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            if st.button("✅ Apply Selected Improvements", type="primary"):
+        st.markdown(FIXED_COL, unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<span class="hide horizontal-marker"></span>', unsafe_allow_html=True)
+            if st.button("✅ Apply Selected Improvements"):
                 # Get selected critique points
                 selected_points = [point for point in st.session_state.critique_points 
                                   if point['id'] in st.session_state.selected_critique_points]
@@ -68,7 +70,6 @@ class CritiqueDialog:
                     st.session_state.improvement_callback(selected_points)
                 st.rerun()
         
-        with col2:
             if st.button("❌ Cancel"):
                 st.session_state.show_critique_dialog = False
                 st.rerun()

@@ -1,5 +1,6 @@
 import streamlit as st
 from typing import Dict, Any, Optional
+from frontend.app import FIXED_COL
 
 # Define artifact types and their configurations
 ARTIFACT_TYPES = {
@@ -141,9 +142,10 @@ class ArtifactModal:
             )
         
         # 3. Generate and Cancel buttons
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            if st.button("✨ Generate", type="primary"):
+        st.markdown(FIXED_COL, unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<span class="hide horizontal-marker"></span>', unsafe_allow_html=True)
+            if st.button("✨ Generate"):
                 # Generate artifact
                 artifact_params = {
                     "type": artifact_type,
@@ -160,10 +162,9 @@ class ArtifactModal:
                     st.session_state.generate_callback(artifact_params)
                 st.rerun()
         
-        with col2:
             if st.button("❌ Cancel"):
                 st.session_state.show_artifact_dialog = False
-                st.rerun()
+                st.rerun()      
         
     def render_dialog(self) -> None:
         """Render the artifact dialog content"""
