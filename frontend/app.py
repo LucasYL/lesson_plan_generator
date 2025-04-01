@@ -1292,13 +1292,13 @@ def handle_artifact_generation(artifact_result, broad_plan):
             model_name="anthropic/claude-3.7-sonnet", temperature=0)
         chain = create_artifact_chain(llm2, artifact_result["type"])
 
-        # 准备参数
+        # Prepare parameters for artifact generation
         params = {
             "phase_content": json.dumps(artifact_result["phase_content"], ensure_ascii=False),
             **artifact_result["requirements"]
         }
         
-        # 对于quiz类型，额外添加整个课程的学习目标
+        # Add lesson objectives if generating quiz
         if artifact_result['type'] == "quiz":
             lesson_objectives = broad_plan.get("objectives", [])
             params["lesson_objectives"] = json.dumps(lesson_objectives, ensure_ascii=False)
