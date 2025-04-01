@@ -1273,10 +1273,10 @@ def revision_dialog():
 
 
 def handle_artifact_generation(artifact_result, broad_plan):
-    """Handle the generation of learning materials
-
+    """Generate learning material based on the selected type
+    
     Args:
-        artifact_result: Result from ArtifactModal containing generation parameters
+        artifact_result: Selected artifact configuration
         broad_plan: Current teaching plan
 
     Returns:
@@ -1292,12 +1292,20 @@ def handle_artifact_generation(artifact_result, broad_plan):
             model_name="anthropic/claude-3.7-sonnet", temperature=0)
         chain = create_artifact_chain(llm2, artifact_result["type"])
 
+        # 准备参数
+        params = {
+            "phase_content": json.dumps(artifact_result["phase_content"], ensure_ascii=False),
+            **artifact_result["requirements"]
+        }
+        
+        # 对于quiz类型，额外添加整个课程的学习目标
+        if artifact_result['type'] == "quiz":
+            lesson_objectives = broad_plan.get("objectives", [])
+            params["lesson_objectives"] = json.dumps(lesson_objectives, ensure_ascii=False)
+
         # Generate content
         with st.spinner(f"Generating {artifact_result['type']}..."):
-            result = chain.invoke({
-                "phase_content": json.dumps(artifact_result["phase_content"], ensure_ascii=False),
-                **artifact_result["requirements"]
-            })
+            result = chain.invoke(params)
 
             # Process output format
             if artifact_result['type'] == "quiz":

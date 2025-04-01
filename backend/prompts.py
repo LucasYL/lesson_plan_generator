@@ -394,17 +394,56 @@ QUIZ_GENERATION_TEMPLATE = PromptTemplate(
         "num_questions",
         "difficulty",
         "question_type",
-        "additional_notes"
+        "additional_notes",
+        "lesson_objectives"
     ],
     template="""
-You are creating a quiz for a lesson phase with the following content:
+You are creating a STUDENT-FOCUSED quiz for a lesson phase with the following content:
 {phase_content}
+
+Overall lesson objectives:
+{lesson_objectives}
 
 Requirements:
 - Number of questions: {num_questions}
-- Difficulty: {difficulty}
+- Difficulty: {difficulty} 
 - Question type: {question_type}
 - Additional notes: {additional_notes}
+
+## QUIZ GUIDELINES:
+1. TARGET AUDIENCE: This quiz is EXCLUSIVELY for STUDENTS, not for teachers or instructors. Questions should directly test student understanding of concepts.
+
+2. CONTENT FOCUS:
+   - Questions must primarily relate to the current phase content provided above
+   - However, ensure questions align with the overall lesson objectives
+   - Test understanding of key concepts, not memorization of trivial details
+
+3. DIFFICULTY CALIBRATION:
+   - Easy: Basic recall and simple application questions accessible to all students
+   - Medium: Application and analysis questions requiring deeper understanding
+   - Hard: Questions involving synthesis, evaluation, or complex problem-solving
+
+4. QUESTION STYLE BY TYPE:
+   - Multiple choice: Provide one clearly correct answer and three plausible distractors
+   - Short answer: Create questions that can be answered in 1-3 sentences
+
+5. PEDAGOGICAL BEST PRACTICES:
+   - Use clear, concise language appropriate for the intended grade level
+   - Avoid ambiguous wording or trick questions
+   - Questions should assess genuine understanding, not confuse students
+   - Include a mix of lower and higher-order thinking skills (per Bloom's taxonomy)
+   - For multiple choice: all options should be plausible, with only one clearly correct answer
+
+6. QUIZ STRUCTURE REQUIREMENTS:
+   - Begin with easier questions and gradually increase difficulty
+   - Include visual elements or scenarios when appropriate
+   - Frame questions in relevant, real-world contexts when possible
+   - For multiple-choice: ensure distractors are plausible but clearly incorrect
+
+7. EXPLANATIONS:
+   - Provide detailed, educational explanations for each answer
+   - Explain not just why the correct answer is right, but also why incorrect options are wrong
+   - Include relevant theory or concepts in explanations to reinforce learning
 
 Create engaging and relevant questions that test understanding of the phase content.
 Focus on key concepts and learning objectives.
@@ -430,7 +469,7 @@ Output the quiz in the following JSON format:
       {{
         "id": 1,
         "correct_answer": "A",
-        "explanation": "Detailed explanation of why this is the correct answer"
+        "explanation": "Detailed explanation of why this is the correct answer and why the other options are incorrect"
       }}
     ]
   }}
@@ -441,10 +480,10 @@ Requirements:
 2. Each question must have:
    - Unique ID (starting from 1)
    - Clear question text
-   - 4 options (A through D)
+   - 4 options (A through D) for multiple choice OR clear expectations for short answer
 3. Each answer must have:
    - Matching ID with its question
-   - Correct answer letter
+   - Correct answer letter (for multiple choice) or expected response elements (for short answer)
    - Detailed explanation
 4. Questions should be relevant to the phase content
 5. Explanations should be educational and thorough
