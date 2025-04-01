@@ -35,7 +35,8 @@ ENV/
 *.swo
 
 # Streamlit
-.streamlit/
+.streamlit/*
+!.streamlit/config.toml
 
 # Project specific
 temp_uploads/
