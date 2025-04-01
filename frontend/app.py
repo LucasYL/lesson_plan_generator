@@ -51,6 +51,11 @@ UI_TEXT = {
     "purpose_label": "Purpose: ",
     "method_label": "Method: ",
     "requirements_label": "Requirements: ",
+    "critique_button": "🔍 Analyze & Enhance with AI",
+    "critique_button_info": "Receive AI-generated feedback and suggestions to improve your lesson plan.",
+    "revise_button": "✏️ Edit Plan",
+    "revise_button_info": "Revise the lesson plan manually or provide feedback for AI to incorporate.",
+    "finalize_button": "☑️ Finalize Plan",
     "tab_names": ["📝 Create Lesson Plan", "📚 Generated Lesson Plan", "📦 Learning Materials"],
     "explanation": """Welcome to the AI Lesson Plan Generator! This tool is designed to help educators create 
 customized, effective, and engaging lesson plans tailored to their specific teaching needs. 
@@ -67,13 +72,15 @@ With this tool, you can:
 
 Please note that the following details are **required**: education level, topic, duration, and teaching style.
 The example lesson plan, reference materials, learning objectives, and requirements are **optional** but can help refine the lesson plan further.
-
-##### Steps to Generate a Lesson Plan:
+        """,
+    "steps": """##### Steps to Generate a Lesson Plan:
 1. 📝 **Fill Out the Form**: Provide the required information (e.g., education level, topic, duration) and any optional details (e.g., learning objectives, reference materials).
-2. 🚀 **Generate the Plan**: Click the **Generate Plan** button to create a detailed lesson plan tailored to your inputs.
-3. ✏️ **Review and Revise**: Review the generated lesson plan and make any necessary revisions using the **Revise Plan** button to edit manually, 
-    or the **Refine with AI** button to receive AI-generated suggestions for improvement. Once satisfied, click **Complete Revision Phase** to finalize the plan.
-4. 📦 **Generate Learning Materials**: Click the **Generate Learning Materials** button in any teaching phase to create supplementary materials such as slides and quizzes.
+2. 🚀 **Generate the Plan**: Click **Generate Plan** to create a detailed lesson plan tailored to your inputs.
+3. ✏️ **Review and Revise**: Review the generated lesson plan and make any necessary revisions. 
+    - Use **Analyze & Enhance with AI** to get AI-generated improvement ideas and select the ones you want the AI to incorporate.
+    - Use **Edit Plan** to manually revise the plan, or provide feedback for AI to incorporate.
+    - Once satisfied, click **Finalize Plan** to lock the plan and proceed.
+4. 📦 **Generate Learning Materials**: Click **Generate Learning Materials** in any teaching phase to create supplementary materials such as slides and quizzes.
 5. 📥 **Download Your Plan**: Download the complete lesson plan and learning materials as a Markdown file for easy reference.
 
 This tool leverages AI to save you time and effort in the lesson planning process, allowing you to focus on what you do best - teaching. Get started today
@@ -215,6 +222,7 @@ def render_header():
     st.header(UI_TEXT["title"])
     st.markdown(UI_TEXT["explanation"], unsafe_allow_html=True)
     display_tips()
+    st.markdown(UI_TEXT["steps"], unsafe_allow_html=True)
     st.divider()
 
 def render_input_form():
@@ -669,14 +677,14 @@ def add_finalize_button():
         }
         .element-container:has(#button-after) + div button {
             background-color: #4CAF50;
-            padding: 15px 25px;
+            padding: 15px 15px;
             }
         </style>
         """,
         unsafe_allow_html=True,
     )
     st.markdown('<span id="button-after"></span>', unsafe_allow_html=True)
-    if st.button("**☑️ Complete Revision Phase**"):
+    if st.button(f"**{UI_TEXT["finalize_button"]}**"):
         st.session_state.finalized = True
         st.rerun()
 
@@ -830,19 +838,25 @@ def display_broad_plan(plan):
                     st.markdown(FIXED_COL, unsafe_allow_html=True)
                     with st.container():
                         st.markdown('<span class="hide horizontal-marker"></span>', unsafe_allow_html=True)
-                        # Add revise plan button (opens dialog)
-                        revise_button_clicked = st.button("✏️ Revise Plan")
                         # Add critique & improve button (automatic enhancement)
-                        critique_button_clicked = st.button("🔍 Refine with AI")
-
-                    # Handle revise button click
-                    if revise_button_clicked:
-                        st.session_state.show_revision_dialog = True
-                        st.rerun()
-
+                        critique_button_clicked = st.button(UI_TEXT["critique_button"])
+                        st.write(UI_TEXT["critique_button_info"])
+                    
                     # Handle critique button click
                     if critique_button_clicked:
                         critique_and_improve()
+                    
+                    st.markdown(FIXED_COL, unsafe_allow_html=True)
+                    with st.container():
+                        st.markdown('<span class="hide horizontal-marker"></span>', unsafe_allow_html=True)
+                        # Add revise plan button (opens dialog)
+                        revise_button_clicked = st.button(UI_TEXT["revise_button"])
+                        st.write(UI_TEXT["revise_button_info"])
+                        
+                    # Handle revise button click
+                    if revise_button_clicked:
+                        st.session_state.show_revision_dialog = True
+                        st.rerun()                    
 
                     # Add button to end revision phase and finalize plan
                     add_finalize_button()
@@ -1558,18 +1572,10 @@ def display_revised_plan(plan_data):
                 st.markdown(FIXED_COL, unsafe_allow_html=True)
                 with st.container():
                     st.markdown('<span class="hide horizontal-marker"></span>', unsafe_allow_html=True)
-                    # Always show Revise Plan button regardless of critique status
-                    revise_button_clicked = st.button("✏️ Revise Plan", key="revise_improved_plan")
                     # Add critique & improve button to enable multiple rounds of critique
-                    critique_button_clicked = st.button("🔍 Refine with AI", key="critique_again")
+                    critique_button_clicked = st.button(UI_TEXT["critique_button"], key="critique_again")
+                    st.write(UI_TEXT["critique_button_info"])
                 
-                # Handle revise button click
-                if revise_button_clicked:
-                    # Store the current plan in session state for the revision dialog
-                    st.session_state.revision_plan_data = broad_plan
-                    st.session_state.show_revision_dialog = True
-                    st.rerun()
-
                 # Handle critique button click
                 if critique_button_clicked:
                     # Store the current improved plan in a temporary variable
@@ -1578,9 +1584,24 @@ def display_revised_plan(plan_data):
                     st.session_state.broad_plan = temp_plan
                     # Call critique_and_improve
                     critique_and_improve()
+                    
+                st.markdown(FIXED_COL, unsafe_allow_html=True)
+                with st.container():
+                    st.markdown('<span class="hide horizontal-marker"></span>', unsafe_allow_html=True)
+                    # Always show Revise Plan button regardless of critique status
+                    revise_button_clicked = st.button(UI_TEXT["revise_button"], key="revise_improved_plan")
+                    st.write(UI_TEXT["revise_button_info"])
+
+                # Handle revise button click
+                if revise_button_clicked:
+                    # Store the current plan in session state for the revision dialog
+                    st.session_state.revision_plan_data = broad_plan
+                    st.session_state.show_revision_dialog = True
+                    st.rerun()
 
                 # Add button to end revision phase and finalize the plan
-                add_finalize_button()
+                if not critique_button_clicked:
+                    add_finalize_button()
             
             # If plan is finalized, display success message, download button, and undo finalize button
             if st.session_state.finalized:
