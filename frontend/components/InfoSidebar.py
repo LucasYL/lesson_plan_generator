@@ -16,7 +16,7 @@ def display_tips():
     """
     Displays information about creating effective lesson plans.
     """
-    with st.expander("Creating Effective Lesson Plans"):
+    with st.expander("Tips for Creating Effective Lesson Plans"):
         st.write("""An effective lesson plan is a key component of successful teaching. Crafting a lesson plan provides teachers 
                  the opportunity to think through the content, activities, and assessments that will be used in a lesson. 
                  A lesson plan also serves as a roadmap for the teacher to follow and ensures that all necessary information is covered.
