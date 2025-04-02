@@ -1886,6 +1886,34 @@ def main():
     with open(Path(__file__).parent / "styles/main.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+    # tab styling (wrap for small screens)
+    st.markdown(
+        """
+    <style>
+        .stTabs [data-baseweb="tab-list"] {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 10px;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            height: 30px;
+            white-space: pre-wrap;
+            background-color: #F0F2F6;
+            border-radius: 10px 10px 0px 0px;
+            padding: 5px 10px;
+        }
+
+        .stTabs [aria-selected="true"] {
+            border-bottom: 1px solid red;
+        }
+        .stTabs [data-baseweb="tab-highlight"] {
+            display: none;
+        }
+    </style>
+        """, unsafe_allow_html=True)
+
     init_session_state()
 
     # Header with title and explanation
