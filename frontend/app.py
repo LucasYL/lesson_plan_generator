@@ -694,7 +694,6 @@ def add_undo_finalize_button():
         st.session_state.finalized = False
         st.rerun()
 
-
 def display_broad_plan(plan):
     """Display the course outline"""
     try:
