@@ -303,6 +303,11 @@ The user has requested the following changes:
    - ALWAYS update the corresponding description and purpose to match the new name
    - Ensure the activities and teaching methods described are appropriate for the new duration
    - Maintain pedagogical consistency with the new phase name
+   - If ONLY the duration of a phase is modified:
+     * Automatically adjust the durations of other phases to maintain the total lesson time
+     * Distribute time adjustments proportionally across other phases when possible
+     * Prioritize preserving time for critical learning activities
+     * Ensure no phase becomes too short to be effective (minimum 5-10 minutes depending on complexity)
 
 5. Do NOT modify phases that weren't mentioned in the user feedback
 6. Do NOT alter the learning objectives unless explicitly requested by the user
@@ -315,6 +320,10 @@ For all types of user feedback:
 4. If a phase name is changed, its description MUST be updated accordingly
 5. Ensure all changes enhance the educational value of the lesson
 6. If feedback contains complete JSON, use it as the basis for revision
+7. When a single phase's duration is changed:
+   - Calculate the time difference between original and new duration
+   - Distribute this time difference across other phases proportionally
+   - Document the duration adjustments clearly in your plan
 
 ### **OUTPUT FORMAT (JSON)**
 You must return a valid JSON object with the same structure as the original plan:
@@ -338,12 +347,17 @@ You must return a valid JSON object with the same structure as the original plan
 ### **CRITICAL REQUIREMENTS**
 1. Your output MUST be valid JSON
 2. When a phase name is changed, its description and purpose MUST be updated to match
-3. Only modify phases that were mentioned in the user feedback
-4. Ensure the total duration matches the original plan's total time
+3. Only modify phases that were mentioned in the user feedback, EXCEPT when redistributing time due to duration changes
+4. Ensure the total duration matches the original plan's total time, always maintain the exact total lesson duration
 5. Make all changes educationally sound and beneficial to the learning experience
 6. When updating a phase's content, ensure it remains aligned with the learning objectives
-7. ALWAYS return JUST the JSON content, nothing else (no preamble, no explanation)
-8. Handle all types of user feedback gracefully - from specific changes to vague requests
+7. When redistributing time due to duration changes:
+   - Maintain proportional balance between phases
+   - Ensure no phase becomes too short to achieve its learning purpose
+   - Consider the pedagogical importance of each phase when redistributing time
+   - Document any duration changes in the phase descriptions
+8. ALWAYS return JUST the JSON content, nothing else (no preamble, no explanation)
+9. Handle all types of user feedback gracefully - from specific changes to vague requests
 """
 )
 
