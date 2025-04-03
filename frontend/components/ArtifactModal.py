@@ -102,13 +102,14 @@ class ArtifactModal:
                 options=["Multiple choice", "Short answer"]
             )
             requirements["additional_notes"] = st.text_area(
-                "Additional notes (Optional)"
+                "Additional notes (Optional)",
+                placeholder="Specify any special requirements for the quiz, such as focusing on specific concepts, including visual elements, or targeting particular learning objectives."
             )
             
         elif artifact_type == "code_practice":
             requirements["programming_language"] = st.selectbox(
                 "Programming language",
-                options=["Python", "JavaScript", "Java", "C++"]
+                options=["Python", "JavaScript", "Java", "C++", "SQL", "C", "TypeScript", "Ruby", "Swift"]
             )
             requirements["difficulty"] = st.select_slider(
                 "Difficulty level",
@@ -123,7 +124,8 @@ class ArtifactModal:
                 ]
             )
             requirements["additional_requirements"] = st.text_area(
-                "Additional requirements (Optional)"
+                "Additional requirements (Optional)",
+                placeholder="Specify any other requirements for the coding exercise. If you need a programming language not listed above, please specify it here (e.g., 'Please use Golang instead')."
             )
         
         elif artifact_type == "slides":
@@ -138,7 +140,8 @@ class ArtifactModal:
                 value=3
             )
             requirements["additional_requirements"] = st.text_area(
-                "Additional requirements (Optional)"
+                "Additional requirements (Optional)",
+                placeholder="Specify any special requirements for the slides, such as focusing on particular concepts, including specific diagrams, or preferred presentation style details."
             )
         
         # 3. Generate and Cancel buttons

@@ -66,8 +66,8 @@ TASK:
    - Note key terminology and definitions
    - Map content to learning objectives
    - Ensure at least 60% of lesson content is based on references
-   - Mark all reference-based content with [REF]
-   - If there is no reference material, no [REF] should be used
+   - Seamlessly integrate reference-based content without explicit markers
+   - If there is no reference material, generate content based on best practices
 
 2) Process User Feedback and Phase Changes:
    - User feedback has the highest priority
@@ -133,7 +133,7 @@ OUTPUT FORMAT (JSON):
       {{
         "phase": "Phase name (must match if specified in feedback)",
         "duration": "Duration (must match if specified in feedback)",
-        "purpose": "What students will achieve in this phase (mark with [REF] if from references)",
+        "purpose": "What students will achieve in this phase",
         "description": "Brief explanation of how this phase will unfold and how it contributes to objectives"
       }}
     ]
@@ -143,7 +143,7 @@ OUTPUT FORMAT (JSON):
 CONSTRAINTS:
 1. Reference Materials:
    * When provided, at least 60% of content must be reference-based
-   * Mark all reference-based content with [REF]
+   * Integrate reference material seamlessly without explicit markers
    * Maintain academic level and teaching style
 
 2. User Feedback:
@@ -213,7 +213,7 @@ Your output must be a valid JSON array containing 1-7 critique points, each with
 2. Focus on meaningful improvements that enhance the educational value
 3. Provide a balanced analysis covering different aspects of the lesson plan
 4. Ensure suggestions are realistic and implementable
-5. NUMBER your critique points from 1 to however many you provide (1-7)
+5. NUMBER your critique points from 1 to however many you provide (1-7), no need to be 4 critique points everytime
 6. If this is likely a follow-up critique after previous improvements, focus on remaining issues
 7. If the plan is already high quality, it's acceptable to provide fewer critique points (as few as 1-2)
 8. STRICTLY follow the JSON format specified above
@@ -347,43 +347,6 @@ You must return a valid JSON object with the same structure as the original plan
 """
 )
 
-
-# Define your default example. If no user-provided example is available,
-# this default will be used to guide the output.
-default_example = """
-## Total Duration: 90 Minutes
-
-## Agenda
-1. Arrays & Pointer Basics in C (20 min)
-2. Visualizing Pointer Arithmetic (15 min)
-3. Break (5 min)
-4. Bubble Sort: Group Simulation (20 min)
-5. Selection Sort: Whiteboarding Exercise (20 min)
-6. Wrap-up & Quick Reflection (10 min)
-
-### 1. Arrays & Pointer Basics in C (20 min)
-- **Overview**: Explain how arrays are stored, pointer notation, and the concept of `arr[i]` vs `*(ptr + i)`.
-- **Activity**: Provide a short code snippet for students to compile. Have them predict pointer addresses.
-
-### 2. Visualizing Pointer Arithmetic (15 min)
-- **Tool**: Use [Pythontutor](https://pythontutor.com) or a similar online tool to step through code.
-- **Objective**: Show how pointers increment in memory, clarifying how element addresses differ by 4 bytes (for `int`).
-
-### 3. Bubble Sort: Group Simulation (20 min)
-- **Setup**: 6 students represent array elements with numbers on index cards. Two more students track comparisons & swaps.
-- **Process**: Step through bubble sort passes physically. Each pass, compare adjacent pairs, swap if out of order.
-- **Debrief**: Count total swaps, discuss best vs worst case time complexity.
-
-### 4. Selection Sort: Whiteboarding Exercise (20 min)
-- **Groups**: Students draw arrays on a small whiteboard.
-- **Task**: Step through selection sort, marking the minimum each time, then swapping.
-- **Debrief**: Compare with bubble sort. Note the differences in swap frequency.
-
-### 5. Wrap-up & Quick Reflection (10 min)
-- **Reflection**: Students write down 2 key takeaways about pointers & 2 about sorting.
-- **Optional Check**: If time allows, do a quick question: "Which scenario is bubble sort more efficient than selection sort?" (Trick question: typically they share O(n^2), but details matter.)
-
-"""
 
 # ==========================================
 # C) ARTIFACTS (Quiz and Code Practice)
