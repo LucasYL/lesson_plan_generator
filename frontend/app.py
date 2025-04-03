@@ -1038,7 +1038,7 @@ def revision_dialog():
     phases = st.session_state.revision_data['phases']
     phase_changes = []  # Track which phases have been modified
 
-    st.info("📌 Click on any phase name or duration to modify it. Then provide any additional content changes in the feedback box below. The system will intelligently update the lesson plan based on your input.")
+    st.info("📌 Click on any phase name or duration to modify it. If you modify the duration, please clearly state in the feedback box that you've adjusted the time allocation. For other content changes, please also specify them in the feedback box below. The system will intelligently update the lesson plan based on your input.")
 
     for i, phase in enumerate(phases):
         with st.container():
