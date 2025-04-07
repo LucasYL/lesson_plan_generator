@@ -797,7 +797,9 @@ def display_broad_plan(plan):
 
                 # Display each phase
                 for i, phase in enumerate(broad_plan.get("outline", [])):
-                    with st.expander(f"{phase['phase']} ({phase['duration']})", expanded=False):
+                    # 如果plan已finalize，则自动展开所有phases
+                    expanded = st.session_state.finalized
+                    with st.expander(f"{phase['phase']} ({phase['duration']})", expanded=expanded):
                         if phase.get("purpose"):
                             st.write("**🎯 Purpose:**")
                             if "[REF]" in phase["purpose"]:
