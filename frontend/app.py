@@ -864,7 +864,7 @@ def display_broad_plan(plan):
 
                 # If plan is finalized, display success message, download button, and undo finalize button
                 if st.session_state.finalized:
-                    st.success(f"Lesson plan finalized. Click **{UI_TEXT["generate_learning_materials"]}** as needed in any teaching phase to generate supplementary materials.")
+                    st.success(f"✨ Lesson plan finalized! Click to expand any teaching phase above to access the **{UI_TEXT['generate_learning_materials']}** button. Generate customized materials for each phase as needed.")
                     add_download_button(broad_plan)
                     add_undo_finalize_button()
 
