@@ -134,7 +134,7 @@ OUTPUT FORMAT (JSON):
         "phase": "Phase name (must match if specified in feedback)",
         "duration": "Duration (must match if specified in feedback)",
         "purpose": "What students will achieve in this phase",
-        "description": "Brief explanation of how this phase will unfold and how it contributes to objectives"
+        "description": "Detailed explanation of how this phase will unfold and how it contributes to objectives"
       }}
     ]
   }}
