@@ -81,7 +81,7 @@ The example lesson plan, reference materials, learning objectives, and requireme
     - Use **Edit Plan** to manually revise the plan, or provide feedback for AI to incorporate.
     - Once satisfied, click **Finalize Plan** to lock the plan and proceed.
 4. 📦 **Generate Learning Materials**: Click **Generate Learning Materials** in any teaching phase to create supplementary materials such as slides and quizzes.
-5. 📥 **Download Your Plan**: Download the complete lesson plan and learning materials as a Markdown file for easy reference.
+5. 📥 **Download Your Plan**: Download the complete lesson plan and learning materials as a Markdown (.md) file for easy reference. Markdown is a simple text format that displays formatting in any text editor and can be opened with Notepad, VS Code, or viewed in browsers with extensions like Markdown Viewer.
 
 This tool leverages AI to save you time and effort in the lesson planning process, allowing you to focus on what you do best - teaching. Get started today
 by filling out the form below!
@@ -90,7 +90,8 @@ by filling out the form below!
 }
 
 GRADE_LEVELS = [
-    "Elementary School",
+    "Primary(K-3)",
+    "Intermediate(4-7)",
     "Middle School",
     "High School",
     "Undergraduate",
@@ -251,7 +252,7 @@ def render_input_form():
                 UI_TEXT["grade_level"],
                 GRADE_LEVELS,
                 index=GRADE_LEVELS.index(
-                    st.session_state.form_data["grade_level"]) if st.session_state.form_data["grade_level"] else 4,
+                    st.session_state.form_data["grade_level"]) if st.session_state.form_data["grade_level"] else 5,
                 label_visibility="collapsed"
             )
 
@@ -441,7 +442,7 @@ def generate_lesson_plan(grade_level, topic, duration, styles, objectives, requi
         llm = get_llm(model_name="gpt-4o", temperature=0)
         llm2 = get_openrouter_llm(
             model_name="anthropic/claude-3.7-sonnet", temperature=0)
-        broad_chain = create_broad_plan_draft_chain(llm)
+        broad_chain = create_broad_plan_draft_chain(llm2)
 
         # Prepare reference document content
         reference_text = st.session_state.form_data.get(
@@ -1368,8 +1369,14 @@ def handle_artifact_generation(artifact_result, broad_plan):
                 }, ensure_ascii=False)
             }
 
-            # Switch to learning materials tab
-            switch_tabs(BUTTON_TO_TAB[UI_TEXT["generate_learning_materials"]])
+            # Set a flag indicating we should switch to Materials tab
+            st.session_state.switch_to_materials = True
+            
+            # Display success message
+            st.success(f"{artifact_result['type'].title()} successfully generated! Redirecting to Learning Materials tab...")
+            
+            # Force page reload
+            st.rerun()
 
             return True
 
@@ -1606,7 +1613,7 @@ def display_revised_plan(plan_data):
             
             # If plan is finalized, display success message, download button, and undo finalize button
             if st.session_state.finalized:
-                st.success(f"Lesson plan finalized. Click **{UI_TEXT["generate_learning_materials"]}** as needed in any teaching phase to create supplementary materials.")
+                st.success(f"✨ Lesson plan finalized! **Click to Expand** any teaching phase above to access the **{UI_TEXT['generate_learning_materials']}** button. Generate customized materials for each phase as needed.")
                 add_download_button(broad_plan)
                 add_undo_finalize_button()
 
@@ -1631,7 +1638,8 @@ def critique_and_improve():
     with st.spinner("Analyzing your lesson plan..."):
         try:
             # Initialize LLM
-            llm1 = get_llm(model_name="gpt-4o-mini", temperature=0)
+            llm1 = get_openrouter_llm(
+            model_name="anthropic/claude-3.7-sonnet", temperature=0)
 
             # Create critique chain
             from backend.prompts import CRITIQUE_TEMPLATE
@@ -1884,6 +1892,10 @@ def main():
         layout="wide"
     )
 
+    # Initialize switch flag
+    if 'switch_to_materials' not in st.session_state:
+        st.session_state.switch_to_materials = False
+
     # Load custom CSS
     with open(Path(__file__).parent / "styles/main.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -1924,6 +1936,9 @@ def main():
     # Create two columns
     left_col, right_col = st.columns([2, 1])
 
+    # Check if we need to switch to Learning Materials tab
+    should_switch_to_materials = st.session_state.switch_to_materials
+    
     # Create tabs
     with left_col:
         tabs = st.tabs(UI_TEXT["tab_names"])
@@ -1968,8 +1983,32 @@ def main():
 
         # Teaching styles info
         display_teaching_styles_info()
-
     
+    # If we need to switch to Learning Materials tab, execute the switch and reset the flag
+    if should_switch_to_materials:
+        # Modify flag to avoid repeated switching
+        st.session_state.switch_to_materials = False
+        # Execute the switch
+        switch_tabs(UI_TEXT["tab_names"][2])
+        
+        # Add hidden JavaScript to ensure switching to Learning Materials tab
+        st.markdown(
+            f"""
+            <script>
+                // Slightly delay execution to ensure DOM is loaded
+                setTimeout(function() {{
+                    var tabContainer = window.parent.document.querySelector('.stTabs');
+                    var tabButtons = tabContainer.querySelectorAll('[role="tab"]');
+                    tabButtons.forEach(function(button) {{
+                        if (button.innerText.trim() === "{UI_TEXT["tab_names"][2]}") {{
+                            button.click();
+                        }}
+                    }});
+                }}, 200);
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
 
 if __name__ == "__main__":
     main()

@@ -241,6 +241,7 @@ Apply ONLY the selected critique points while following these rules:
 4. Enhance alignment with learning objectives
 5. Address ONLY the selected critique points thoroughly
 6. Do NOT make changes related to critique points that were NOT selected
+7. If you improves any teaching phases, please mark the phase as (Improved) at the end of description
 
 ### **OUTPUT FORMAT (JSON)**
 {{
@@ -324,6 +325,7 @@ For all types of user feedback:
    - Calculate the time difference between original and new duration
    - Distribute this time difference across other phases proportionally
    - Document the duration adjustments clearly in your plan
+8. If you revise any teaching phases, please mark the phase as (Revised) at the end of description
 
 ### **OUTPUT FORMAT (JSON)**
 You must return a valid JSON object with the same structure as the original plan:
