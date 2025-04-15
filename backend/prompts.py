@@ -241,7 +241,8 @@ Apply ONLY the selected critique points while following these rules:
 4. Enhance alignment with learning objectives
 5. Address ONLY the selected critique points thoroughly
 6. Do NOT make changes related to critique points that were NOT selected
-7. If you improves any teaching phases, please mark the phase as (Improved) at the end of description
+7. If you make any changes to any teaching phase, please provide a brief summary of the changes that were made to that phase based on selected critique points
+8. If any phases have a summary of changes from previous revisions, please update that summary to reflect the changes made in this revision or remove it if no changes were made
 
 ### **OUTPUT FORMAT (JSON)**
 {{
@@ -254,7 +255,8 @@ Apply ONLY the selected critique points while following these rules:
         "phase": "Phase name (can be modified based on selected critique)",
         "duration": "Duration (can be adjusted based on selected critique)",
         "purpose": "Enhanced purpose statement addressing selected critique points",
-        "description": "Improved description with more clarity and detail"
+        "description": "Improved description with more clarity and detail", 
+        "summary of changes": "Summary of changes made to this phase based on selected critique points (if applicable)"
       }}
     ]
   }}
@@ -325,7 +327,8 @@ For all types of user feedback:
    - Calculate the time difference between original and new duration
    - Distribute this time difference across other phases proportionally
    - Document the duration adjustments clearly in your plan
-8. If you revise any teaching phases, please mark the phase as (Revised) at the end of description
+8. If you make any changes to any teaching phase, please provide a brief summary of the changes that were made to that phase based on user feedback
+8. If any phases have a summary of changes from previous revisions, please update that summary to reflect the changes made in this revision or remove it if no changes were made
 
 ### **OUTPUT FORMAT (JSON)**
 You must return a valid JSON object with the same structure as the original plan:
@@ -339,7 +342,8 @@ You must return a valid JSON object with the same structure as the original plan
         "phase": "Phase name (modified if specified in request)",
         "duration": "Duration (modified if specified in request)",
         "purpose": "Purpose statement (updated for any modified phase)",
-        "description": "Description (updated for any modified phase to match new phase name and content)"
+        "description": "Description (updated for any modified phase to match new phase name and content)",
+        "summary of changes": "Summary of changes made to this phase based on user feedback (if applicable)"
       }},
       // Additional phases...
     ]

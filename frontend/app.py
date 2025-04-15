@@ -281,6 +281,7 @@ def render_input_form():
             options=style_names,
             default=current_styles,
             max_selections=3,
+            placeholder="Please select at least (1) teaching style",
         )
 
         # Add learning objectives with expander
@@ -312,7 +313,7 @@ def render_input_form():
         # Add requirements with expander
         with st.expander(UI_TEXT["requirements"], expanded=False):
             requirements = st.text_area(
-                "Enter any additional requirements for the lesson below.",
+                "Are there any specific elements, requirements, or constraints you want to include in the lesson plan? Enter them below to guide the AI.",
                 height=100,
                 value="\n".join(
                     st.session_state.form_data["requirements"]) if st.session_state.form_data["requirements"] else "",
@@ -322,7 +323,7 @@ def render_input_form():
         # Add example lesson plan input area with expander
         with st.expander(UI_TEXT["example_plan"], expanded=False):
             example = st.text_area(
-                "Enter an example lesson plan below as reference to guide the AI.",
+                "Do you have an example lesson plan? Enter it below to guide the AI to include similar elements.",
                 height=150,
                 value=st.session_state.form_data["example"] if st.session_state.form_data["example"] else "",
                 placeholder="You can provide a reference lesson plan example here. If left empty, default examples will be used."
@@ -535,16 +536,23 @@ def export_learning_materials_to_markdown(plan_data):
                     for question in quiz_data["quiz_data"]["questions"]:
                         markdown_content += f"**Question {question['id']}**\n\n"
                         markdown_content += f"{question['question']}\n\n"
-                        markdown_content += "**Options:**\n\n"
-                        for opt_key, opt_value in question["options"].items():
-                            markdown_content += f"- {opt_key}) {opt_value}\n"
+                        if "options" in question:
+                            markdown_content += "**Options:**\n\n"
+                            for opt_key, opt_value in question["options"].items():
+                                markdown_content += f"- {opt_key}) {opt_value}\n"
                         markdown_content += "\n"
 
                     # Answers section
                     markdown_content += "##### Answers & Explanations\n\n"
                     for answer in quiz_data["quiz_data"]["answers"]:
                         markdown_content += f"**Question {answer['id']}**\n\n"
-                        markdown_content += f"Correct Answer: {answer['correct_answer']}\n\n"
+                        if "correct_answer" in answer:
+                            markdown_content += f"Correct Answer: {answer['correct_answer']}\n\n"
+                        else:
+                            markdown_content += "Answer Guidelines:\n\n"
+                            for ans in answer["expected_elements"]:
+                                markdown_content += f"- {ans}\n"
+                        markdown_content += "\n"
                         markdown_content += "Explanation:\n\n"
                         markdown_content += f"{answer['explanation']}\n\n"
 
@@ -593,17 +601,23 @@ def display_learning_materials(broad_plan):
                 for question in quiz_data["quiz_data"]["questions"]:
                     st.markdown(f"#### Question {question['id']}")
                     st.markdown(question["question"])
-                    st.markdown("**Options:**")
-                    for opt_key, opt_value in question["options"].items():
-                        st.markdown(f"{opt_key}) {opt_value}")
+                    if "options" in question:
+                        st.markdown("**Options:**")
+                        for opt_key, opt_value in question["options"].items():
+                            st.markdown(f"{opt_key}) {opt_value}")
                     st.markdown("---")
 
             # Display answers and explanations
             with answers_tab:
                 for answer in quiz_data["quiz_data"]["answers"]:
                     st.markdown(f"#### Question {answer['id']}")
-                    st.markdown(
-                        f"**Correct Answer:** {answer['correct_answer']}")
+                    if "correct_answer" in answer:
+                        st.markdown(f"**Correct Answer:** {answer['correct_answer']}")
+                    else:
+                        st.markdown("**Answer Guidelines:** ")
+                        for ans in answer["expected_elements"]:
+                            st.markdown(f"- {ans}")
+                    st.markdown(" ")
                     st.markdown("**Explanation:**")
                     st.markdown(answer["explanation"])
                     st.markdown("---")
@@ -798,9 +812,13 @@ def display_broad_plan(plan):
 
                 # Display each phase
                 for i, phase in enumerate(broad_plan.get("outline", [])):
+                    if "summary of changes" in phase:
+                        icon = "✨"
+                    else:
+                        icon = None
                     # If plan is finalized, automatically expand all phases
                     expanded = st.session_state.finalized
-                    with st.expander(f"{phase['phase']} ({phase['duration']})", expanded=expanded):
+                    with st.expander(f"{phase['phase']} ({phase['duration']})", expanded=expanded, icon=icon):
                         if phase.get("purpose"):
                             st.write("**🎯 Purpose:**")
                             if "[REF]" in phase["purpose"]:
@@ -811,6 +829,10 @@ def display_broad_plan(plan):
                         if phase.get("description"):
                             st.write("**📝 Description:**")
                             st.write(phase["description"])
+
+                        if phase.get("summary of changes"):
+                            st.write("**✨ Summary of Changes:**")
+                            st.write(phase["summary of changes"])
 
                         # Add generate materials button
                         if st.session_state.finalized:
@@ -1538,10 +1560,14 @@ def display_revised_plan(plan_data):
             # Initialize ArtifactModal
             from components.ArtifactModal import ArtifactModal
             artifact_modal = ArtifactModal()
-
+            
             # Display each phase
             for i, phase in enumerate(broad_plan.get("outline", [])):
-                with st.expander(f"{phase['phase']} ({phase['duration']})", expanded=False):
+                if "summary of changes" in phase:
+                    icon = "✨"
+                else: 
+                    icon = None
+                with st.expander(f"{phase['phase']} ({phase['duration']})", expanded=False, icon=icon):
                     if phase.get("purpose"):
                         st.write("**🎯 Purpose:**")
                         if "[REF]" in phase["purpose"]:
@@ -1552,6 +1578,10 @@ def display_revised_plan(plan_data):
                     if phase.get("description"):
                         st.write("**📝 Description:**")
                         st.write(phase["description"])
+
+                    if phase.get("summary of changes"):
+                        st.write("**✨ Summary of Changes:**")
+                        st.write(phase["summary of changes"])
 
                     # Add generate materials button
                     if st.session_state.finalized:
