@@ -95,7 +95,8 @@ GRADE_LEVELS = [
     "Middle School",
     "High School",
     "Undergraduate",
-    "Graduate"
+    "Graduate",
+    "Adult Education"
 ]
 
 TEACHING_STYLES = [
