@@ -4,10 +4,9 @@ import os
 import json
 from pathlib import Path
 
-import time
-
 # Third-party imports
 import streamlit as st
+from fpdf import FPDF
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
@@ -1478,14 +1477,61 @@ def export_to_markdown(plan_data):
 
     return md_content
 
+def export_to_pdf(plan_data):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
 
-def create_download_link(content, filename, link_text):
+    # Add title
+    pdf.set_font("Arial", style="B", size=16)
+    pdf.cell(200, 10, txt="Lesson Plan", ln=True, align="C")
+    pdf.ln(10)
+
+    # Add learning objectives
+    pdf.set_font("Arial", style="B", size=14)
+    pdf.cell(200, 10, txt="Learning Objectives", ln=True)
+    pdf.set_font("Arial", size=12)
+    for obj in plan_data.get("objectives", []):
+        pdf.multi_cell(0, 10, f"- {obj}")
+    pdf.ln(10)
+
+    # Add teaching phases
+    pdf.set_font("Arial", style="B", size=14)
+    pdf.cell(200, 10, txt="Teaching Phases", ln=True)
+    pdf.set_font("Arial", size=12)
+    for phase in plan_data.get("outline", []):
+        pdf.set_font("Arial", style="B", size=12)
+        pdf.cell(200, 10, txt=f"{phase['phase']} ({phase['duration']})", ln=True)
+        pdf.set_font("Arial", size=12) 
+        if phase.get("purpose"):
+            pdf.set_font("Arial", style="B", size=12)  # Bold label
+            pdf.multi_cell(0, 10, f"Purpose: ")
+            pdf.set_font("Arial", size=12)  # Regular text
+            pdf.multi_cell(0, 10, phase['purpose'])
+        if phase.get("description"):
+            pdf.set_font("Arial", style="B", size=12)  # Bold label
+            pdf.multi_cell(0, 10, f"Description: ")
+            pdf.set_font("Arial", size=12)  # Regular text
+            pdf.multi_cell(0, 10, phase['description'])
+        pdf.ln(5)
+
+    # Save PDF to a file
+    pdf_file = "lesson_plan.pdf"
+    pdf.output(pdf_file)
+    return pdf_file
+
+
+def create_download_link(content, filename, link_text, type):
     """Create a download link for text content"""
     import base64
-    b64 = base64.b64encode(content.encode()).decode()
+    if type == "pdf":
+        with open(content, "rb") as f:
+            content = f.read()
+            b64 = base64.b64encode(content).decode()
+    else:
+        b64 = base64.b64encode(content.encode()).decode()
     href = f'<a href="data:text/markdown;base64,{b64}" download="{filename}" style="display: inline-block; padding: 0.5rem 1rem; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">{link_text}</a>'
     return href
-
 
 def add_download_button(plan_data):
     """Add a download button for the lesson plan"""
@@ -1496,9 +1542,21 @@ def add_download_button(plan_data):
     download_link = create_download_link(
         md_content,
         "lesson_plan.md",
-        "📥 Download Lesson Plan"
+        "📥 Download Lesson Plan (Markdown)",
+        "md"
     )
     st.markdown(download_link, unsafe_allow_html=True)
+
+    # download as PDF
+    pdf_content = export_to_pdf(plan_data)
+    pdf_link = create_download_link(
+        pdf_content,
+        "lesson_plan.pdf",
+        "📥 Download Lesson Plan (PDF)",
+        "pdf"
+    )
+    st.markdown(pdf_link, unsafe_allow_html=True)
+
 
 
 def display_revised_plan(plan_data):
