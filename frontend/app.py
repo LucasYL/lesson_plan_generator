@@ -443,7 +443,7 @@ def generate_lesson_plan(grade_level, topic, duration, styles, objectives, requi
         llm = get_llm(model_name="gpt-4o", temperature=0)
         llm2 = get_openrouter_llm(
             model_name="anthropic/claude-3.7-sonnet", temperature=0)
-        broad_chain = create_broad_plan_draft_chain(llm2)
+        broad_chain = create_broad_plan_draft_chain(llm)
 
         # Prepare reference document content
         reference_text = st.session_state.form_data.get(
@@ -1214,7 +1214,8 @@ def revision_dialog():
                         revised_plan = json_content
                     else:
                         # Initialize LLM for precise revision
-                        llm = get_openrouter_llm(
+                        llm = get_llm(model_name="gpt-4o", temperature=0)
+                        llm1 = get_openrouter_llm(
                             model_name="anthropic/claude-3.7-sonnet", temperature=0)
 
                         # Import the precise revision chain
@@ -1328,7 +1329,7 @@ def handle_artifact_generation(artifact_result, broad_plan):
         llm = get_llm(model_name="gpt-4o", temperature=0)
         llm2 = get_openrouter_llm(
             model_name="anthropic/claude-3.7-sonnet", temperature=0)
-        chain = create_artifact_chain(llm2, artifact_result["type"])
+        chain = create_artifact_chain(llm, artifact_result["type"])
 
         # Prepare parameters for artifact generation
         params = {
@@ -1729,13 +1730,13 @@ def critique_and_improve():
             # Initialize LLM
             llm1 = get_openrouter_llm(
             model_name="anthropic/claude-3.7-sonnet", temperature=0)
-
+            llm = get_llm(model_name="gpt-4o", temperature=0)
             # Create critique chain
             from backend.prompts import CRITIQUE_TEMPLATE
             from langchain.chains import LLMChain
 
             critique_chain = LLMChain(
-                llm=llm1,
+                llm=llm,
                 prompt=CRITIQUE_TEMPLATE,
                 output_key="critique"
             )
@@ -1906,12 +1907,13 @@ def apply_improvements(selected_critique_points):
     with st.spinner("Improving your lesson plan based on selected suggestions..."):
         try:
             # Initialize LLM
+            llm  = get_llm(model_name="gpt-4o", temperature=0)
             llm2 = get_openrouter_llm(
                 model_name="anthropic/claude-3.7-sonnet", temperature=0)
 
             # Create revise selected chain
             from backend.chains import create_revise_selected_plan_chain
-            revise_chain = create_revise_selected_plan_chain(llm2)
+            revise_chain = create_revise_selected_plan_chain(llm)
 
             # Convert selected critique points to JSON string
             selected_critique_str = json.dumps(
